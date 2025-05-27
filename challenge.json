@@ -1,0 +1,152 @@
+[
+  {
+    "question": "کدام نقش بیشترین HP را معمولاً در Mobile Legends دارد؟",
+    "choices": ["Assassin", "Mage", "Tank", "Marksman"],
+    "answer": 2
+  },
+  {
+    "question": "آلتیمیت هیرو Layla چیست؟",
+    "choices": ["Malefic Bomb", "Destruction Rush", "Void Projectile", "Power Shot"],
+    "answer": 1
+  },
+  {
+    "question": "کدام آیتم سرعت هیرو را افزایش میدهد؟",
+    "choices": ["Blade of Despair", "Swift Boots", "Immortality", "Athena's Shield"],
+    "answer": 1
+  },
+  {
+    "question": "کدام هیرو بیشتر نقش ساپورت را دارد؟",
+    "choices": ["Angela", "Lancelot", "Hayabusa", "Granger"],
+    "answer": 0
+  },
+  {
+    "question": "چه کسی سازنده بازی Mobile Legends است؟",
+    "choices": ["Tencent", "Moonton", "Garena", "Riot Games"],
+    "answer": 1
+  },
+  {
+    "question": "کدام نقش وظیفه فارم جنگل را دارد؟",
+    "choices": ["Tank", "Jungler", "EXP Laner", "Gold Laner"],
+    "answer": 1
+  },
+  {
+    "question": "هیرو 'Gusion' چه نقشی دارد؟",
+    "choices": ["Tank", "Fighter", "Assassin", "Marksman"],
+    "answer": 2
+  },
+  {
+    "question": "بیشترین دمیج را کدام نقش می‌دهد؟",
+    "choices": ["Tank", "Support", "Marksman", "Roamer"],
+    "answer": 2
+  },
+  {
+    "question": "کدام آیتم برای بازیابی HP مناسب است؟",
+    "choices": ["Bloodlust Axe", "Swift Boots", "Endless Battle", "Dominance Ice"],
+    "answer": 0
+  },
+  {
+    "question": "رتبه Legend بالاتر است یا Epic؟",
+    "choices": ["Epic", "Legend", "هر دو یکی‌اند", "Mythic"],
+    "answer": 1
+  },
+  {
+    "question": "کدام لاین برای Gold Laner مناسب است؟",
+    "choices": ["Top", "Mid", "Gold Lane", "EXP Lane"],
+    "answer": 2
+  },
+  {
+    "question": "آیکون کدام نقش یک شمشیر است؟",
+    "choices": ["Fighter", "Tank", "Mage", "Assassin"],
+    "answer": 0
+  },
+  {
+    "question": "کدام هیرو Mage است؟",
+    "choices": ["Valir", "Granger", "Bruno", "Baxia"],
+    "answer": 0
+  },
+  {
+    "question": "کدام هیرو قابلیت نامرئی شدن دارد؟",
+    "choices": ["Natalia", "Franco", "Esmeralda", "Aldous"],
+    "answer": 0
+  },
+  {
+    "question": "کدام آیتم برای جلوگیری از مرگ است؟",
+    "choices": ["Immortality", "Blade of Despair", "Hunter Strike", "Clock of Destiny"],
+    "answer": 0
+  },
+  {
+    "question": "کدام نقش معمولاً در وسط نقشه بازی می‌کند؟",
+    "choices": ["Gold Laner", "EXP Laner", "Mid Laner", "Roamer"],
+    "answer": 2
+  },
+  {
+    "question": "کدام نقش اغلب در گنک نقش دارد؟",
+    "choices": ["Marksman", "Jungler", "EXP Laner", "Gold Laner"],
+    "answer": 1
+  },
+  {
+    "question": "کدام اسکین رایگان است؟",
+    "choices": ["Elite", "Epic", "Basic", "Legend"],
+    "answer": 2
+  },
+  {
+    "question": "نام Event معروف تابستانی چیست؟",
+    "choices": ["Starlight", "Summer Carnival", "Lucky Spin", "M2"],
+    "answer": 1
+  },
+  {
+    "question": "کدام آیتم برای مانا مناسب است؟",
+    "choices": ["Concentrated Energy", "Thunder Belt", "Enchanted Talisman", "Endless Battle"],
+    "answer": 2
+  },
+  {
+    "question": "کدام نقش سریع‌ترین فارم را دارد؟",
+    "choices": ["Support", "Jungler", "Tank", "EXP Laner"],
+    "answer": 1
+  },
+  {
+    "question": "کدام قابلیت برای فرار مناسب است؟",
+    "choices": ["Flicker", "Sprint", "Revitalize", "Retribution"],
+    "answer": 0
+  },
+  {
+    "question": "کدام آیتم HP را افزایش می‌دهد؟",
+    "choices": ["Bloodlust Axe", "Blade Armor", "Cursed Helmet", "Hunter Strike"],
+    "answer": 2
+  },
+  {
+    "question": "کدام حالت بازی ۵v۵ نیست؟",
+    "choices": ["Classic", "Ranked", "Brawl", "Mayhem"],
+    "answer": 2
+  },
+  {
+    "question": "کدام آیتم برای کاهش CD مناسب است؟",
+    "choices": ["Fleeting Time", "Thunder Belt", "Endless Battle", "Athena's Shield"],
+    "answer": 0
+  },
+  {
+    "question": "کدام اصطلاح برای گنک استفاده می‌شود؟",
+    "choices": ["AFK", "Feed", "Roam", "Gank"],
+    "answer": 3
+  },
+  {
+    "question": "کدام هیرو قابلیت Heal گروهی دارد؟",
+    "choices": ["Rafaela", "Franco", "Miya", "Lancelot"],
+    "answer": 0
+  },
+  {
+    "question": "کدام آیتم دمیج فیزیکی می‌دهد؟",
+    "choices": ["Endless Battle", "Ice Queen Wand", "Dominance Ice", "Enchanted Talisman"],
+    "answer": 0
+  },
+  {
+    "question": "بیشترین گلد را کدام لاین می‌دهد؟",
+    "choices": ["EXP Lane", "Jungle", "Gold Lane", "Mid Lane"],
+    "answer": 2
+  },
+  {
+    "question": "کدام نقش معمولاً Ward می‌خرد؟",
+    "choices": ["Roamer", "Jungler", "EXP Laner", "Gold Laner"],
+    "answer": 0
+  }
+]
