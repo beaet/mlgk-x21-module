@@ -275,6 +275,29 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   if (user?.banned) {
     return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده از ربات را ندارید.');
   }
+  
+  try {
+    const cooldownRef = ref(db, `cooldowns/start/${userId}`);
+    const cooldownSnap = await get(cooldownRef);
+
+    if (cooldownSnap.exists()) {
+      const lastStartTime = cooldownSnap.val();
+      if (now - lastStartTime < 10000) {
+        // اگر کمتر از ۱۰ ثانیه از استارت قبلی گذشته بود، هیچ کاری نکن
+        return;
+      }
+    }
+
+    // ثبت زمان جدید استارت
+    await set(cooldownRef, now);
+
+    // ادامه اجرای منوی اصلی
+    sendMainMenu(userId, msg.message_id, null, null); // یا فقط userId بسته به توابع شما
+  } catch (err) {
+    console.error("خطا در پردازش /start:", err);
+  }
+
+  
   if (refId && refId !== userId) {
     const refUser = await getUser(refId);
     if (refUser && !user.invited_by) {
