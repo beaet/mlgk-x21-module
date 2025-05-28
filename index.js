@@ -7,6 +7,7 @@ const { getDatabase, ref, set, get, update, remove, push } = require('firebase/d
 const app = express();
 const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
+const match = require('./match');
 const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = require('./pick');
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
@@ -199,6 +200,9 @@ function mainMenuKeyboard() {
     reply_markup: {
       inline_keyboard: [
     [
+          { text: '🎲 پیدا کردن هم‌‌تیمی رندوم', callback_data: 'find_teammate' }
+    ],
+    [
       { text: '📊محاسبه ریت', callback_data: 'calculate_rate' },
       { text: '🏆محاسبه برد و باخت', callback_data: 'calculate_wl' }
     ],
@@ -275,29 +279,6 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   if (user?.banned) {
     return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده از ربات را ندارید.');
   }
-  
-  try {
-    const cooldownRef = ref(db, `cooldowns/start/${userId}`);
-    const cooldownSnap = await get(cooldownRef);
-
-    if (cooldownSnap.exists()) {
-      const lastStartTime = cooldownSnap.val();
-      if (now - lastStartTime < 10000) {
-        // اگر کمتر از ۱۰ ثانیه از استارت قبلی گذشته بود، هیچ کاری نکن
-        return;
-      }
-    }
-
-    // ثبت زمان جدید استارت
-    await set(cooldownRef, now);
-
-    // ادامه اجرای منوی اصلی
-    sendMainMenu(userId, msg.message_id, null, null); // یا فقط userId بسته به توابع شما
-  } catch (err) {
-    console.error("خطا در پردازش /start:", err);
-  }
-
-  
   if (refId && refId !== userId) {
     const refUser = await getUser(refId);
     if (refUser && !user.invited_by) {
@@ -458,6 +439,97 @@ if (banSnap.exists() && banSnap.val().until > now) {
   });
   return;
 }
+
+if (data === 'find_teammate') {
+  const user = await getUser(userId);
+  const maxDailyChance = match.getMaxDailyChance(user);
+  const usedChance = user.findChanceUsed || 0;
+  if (usedChance >= maxDailyChance) {
+    return bot.answerCallbackQuery(query.id, { text: `سقف شانس امروزیت پره! برای هر ۵ دعوت یک شانس جدید می‌گیری.`, show_alert: true });
+  }
+  userState[userId] = { step: 'find_teammate_category' };
+  await bot.answerCallbackQuery(query.id);
+  return bot.sendMessage(userId, `شانس امروز شما: ${maxDailyChance - usedChance} از ${maxDailyChance}\nنوع بازی رو انتخاب کن:`, {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: 'رنک', callback_data: 'find_teammate_ranked' },
+          { text: 'کلاسیک', callback_data: 'find_teammate_classic' }
+        ],
+        [{ text: 'اطلاعات من', callback_data: 'find_teammate_profile' }],
+        [{ text: 'بازگشت', callback_data: 'main_menu' }]
+      ]
+    }
+  });
+}
+
+if (data === 'find_teammate_ranked' || data === 'find_teammate_classic') {
+  userState[userId] = { step: 'waiting_match', mode: data === 'find_teammate_ranked' ? 'ranked' : 'classic' };
+  await bot.answerCallbackQuery(query.id);
+  await match.addToQueue({ userId, mode: userState[userId].mode, db, bot, userState });
+  return;
+}
+
+if (data === 'find_teammate_profile') {
+  userState[userId] = { step: 'find_teammate_profile' };
+  await bot.answerCallbackQuery(query.id);
+  return bot.sendMessage(userId, `لطفا اطلاعات خود را وارد کنید (مثلا: رول‌هایی که پیک میدی، رنکت، آیدی بازی، ...)\nاین اطلاعات فقط موقع مچ به هم‌تیمیت نشون داده میشه.`);
+}
+
+if (data === 'anon_cancel') {
+  match.leaveChat(userId, userState, bot, true, db);
+  await bot.answerCallbackQuery(query.id, { text: 'چت لغو شد.', show_alert: true });
+  return;
+}
+if (data === 'anon_accept') {
+  const partnerId = userState[userId]?.chatPartner;
+  if (partnerId && userState[partnerId] && userState[partnerId].step === 'in_anonymous_chat') {
+    userState[userId] = null;
+    userState[partnerId] = null;
+    await bot.sendMessage(partnerId, 'هم‌تیمی شما چت را با موفقیت تایید کرد. موفق باشید!');
+    await bot.sendMessage(userId, 'چت با موفقیت پایان یافت.');
+  }
+  await bot.answerCallbackQuery(query.id, { text: 'چت پایان یافت.' });
+  return;
+}
+if (data === 'anon_report') {
+  const partnerId = userState[userId]?.chatPartner;
+  if (partnerId) {
+    await bot.sendMessage(adminId, `🚨 گزارش چت ناشناس\nآیدی ۱: ${userId}\nآیدی ۲: ${partnerId}`);
+  }
+  await bot.answerCallbackQuery(query.id, { text: 'گزارش شما ثبت شد.', show_alert: true });
+  return;
+}
+
+if (data === 'profile') {
+  await bot.answerCallbackQuery(query.id);
+  const invitesCount = user.invites || 0;
+  const maxDailyChance = match.getMaxDailyChance(user);
+  const usedChance = user.findChanceUsed || 0;
+
+  // اطلاعات پروفایل هم‌تیمی
+  const teammateProfile = user.teammate_profile || {};
+  const desc = teammateProfile.desc || 'نامشخص';
+
+  let profileMessage = 
+    `🆔 آیدی عددی: ${userId}\n` +
+    `⭐ امتیاز فعلی: ${user.points}\n` +
+    `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
+    `🎲 شانس روزانه هم‌تیمی: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
+    `👤 اطلاعات هم‌تیمی: ${desc}`;
+
+  return bot.sendMessage(userId, profileMessage, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '✏️ ویرایش اطلاعات هم‌تیمی', callback_data: 'find_teammate_profile' }]
+      ]
+    }
+  });
+}
+
+
+
+
 
 // دکمه رندوم پیک
 if (data === 'pick_hero') {
@@ -983,10 +1055,7 @@ if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
 لینک اختصاصی خودتو برای دوستات بفرست!
 هر کسی که با لینک تو وارد ربات بشه، ۵ امتیاز دائمی می‌گیری ⭐️
 لینک دعوت مخصوص شما⬇️:\nhttps://t.me/mlbbratebot?start=${userId}`);
-    case 'profile':
-      await bot.answerCallbackQuery(query.id);
-      const invitesCount = user.invites || 0;
-      return bot.sendMessage(userId, `🆔 آیدی عددی: ${userId}\n⭐ امتیاز فعلی: ${user.points}\n📨 تعداد دعوتی‌ها: ${invitesCount}`);
+
     case 'buy':
       await bot.answerCallbackQuery(query.id);
       return bot.sendMessage(userId, '🎁 برای خرید امتیاز و دسترسی به امکانات بیشتر به پیوی زیر پیام دهید:\n\n📩 @Beast3694');
@@ -1103,6 +1172,30 @@ if (!botActive && msg.from.id !== adminId) {
       return bot.sendMessage(adminId, '✅ پیام شما به کاربر ارسال شد.');
     }
   }
+  
+  if (state && state.step === 'find_teammate_profile') {
+  state.info = { desc: text };
+  await update(userRef(userId), { teammate_profile: state.info });
+  userState[userId] = null;
+  return bot.sendMessage(userId, 'اطلاعات شما ذخیره شد! دوباره دکمه پیدا کردن هم‌تیمی را بزنید.');
+}
+
+if (state && state.step === 'in_anonymous_chat' && state.chatPartner) {
+  const partnerId = state.chatPartner;
+  if (userState[partnerId] && userState[partnerId].chatPartner === userId) {
+    await bot.sendMessage(partnerId, `ناشناس: ${text}`);
+  } else {
+    await bot.sendMessage(userId, 'ارتباط قطع شده.');
+    userState[userId] = null;
+  }
+  return;
+}
+
+if (text === '/cancel' && state && state.step === 'waiting_match') {
+  match.removeFromQueue(userId);
+  userState[userId] = null;
+  return bot.sendMessage(userId, 'درخواست پیدا کردن هم‌تیمی لغو شد.');
+}
 
   const state = userState[userId];
   if (!state) return;
