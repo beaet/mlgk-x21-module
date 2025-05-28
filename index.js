@@ -788,24 +788,12 @@ if (data === 'hero_counter') {
 if (data.startsWith('delete_squadreq_') && userId === adminId) {
   const reqId = data.replace('delete_squadreq_', '');
 
-  const req = await getSquadReq(reqId);
-  if (!req || req.deleted) {
-    return bot.answerCallbackQuery(query.id, {
-      text: 'درخواست پیدا نشد یا قبلا حذف شده.',
-      show_alert: true
-    });
-  }
-
-  // نمایش پنل انتخاب نوع حذف
-  await bot.sendMessage(userId, `نحوه حذف درخواست اسکواد کاربر ${req.user_id} را انتخاب کنید:`, {
+  // ذخیره‌سازی موقتی برای شناسایی ادامه مسیر
+  await bot.sendMessage(userId, 'نحوه حذف را انتخاب کنید:', {
     reply_markup: {
       inline_keyboard: [
-        [
-          { text: '🟢 حذف + بازگرداندن ۵ سکه', callback_data: `squad_delete_back_${reqId}` }
-        ],
-        [
-          { text: '🔴 فقط حذف (بدون بازگشت سکه)', callback_data: `squad_delete_noback_${reqId}` }
-        ]
+        [{ text: '🟢 حذف + بازگرداندن امتیاز', callback_data: `squaddelete_withpoints_${reqId}` }],
+        [{ text: '🔴 حذف بدون بازگرداندن امتیاز', callback_data: `squaddelete_nopoints_${reqId}` }]
       ]
     }
   });
@@ -814,11 +802,10 @@ if (data.startsWith('delete_squadreq_') && userId === adminId) {
   return;
 }
 
-
-// حذف با بازگرداندن امتیاز
-if (data.startsWith('squad_delete_back_') && userId === adminId) {
-  const reqId = data.replace('squad_delete_back_', '');
+if (data.startsWith('squaddelete_withpoints_') && userId === adminId) {
+  const reqId = data.replace('squaddelete_withpoints_', '');
   const req = await getSquadReq(reqId);
+
   if (!req || req.deleted) {
     return bot.answerCallbackQuery(query.id, {
       text: 'درخواست پیدا نشد یا قبلا حذف شده.',
@@ -828,15 +815,15 @@ if (data.startsWith('squad_delete_back_') && userId === adminId) {
 
   await update(squadReqRef(reqId), { deleted: true });
   await updatePoints(req.user_id, 5);
-  await bot.sendMessage(req.user_id, `درخواست اسکواد شما توسط مدیریت حذف شد و ۵ سکه به حساب شما بازگردانده شد.`);
-  await bot.answerCallbackQuery(query.id, { text: 'با موفقیت حذف شد و امتیاز برگشت.', show_alert: true });
+  await bot.sendMessage(req.user_id, `درخواست اسکواد شما توسط مدیریت حذف شد و ۵ امتیاز به حساب شما بازگردانده شد.`);
+  await bot.answerCallbackQuery(query.id, { text: '✅ حذف شد + امتیاز برگشت.' });
   return;
 }
 
-// حذف بدون بازگرداندن امتیاز
-if (data.startsWith('squad_delete_noback_') && userId === adminId) {
-  const reqId = data.replace('squad_delete_noback_', '');
+if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
+  const reqId = data.replace('squaddelete_nopoints_', '');
   const req = await getSquadReq(reqId);
+
   if (!req || req.deleted) {
     return bot.answerCallbackQuery(query.id, {
       text: 'درخواست پیدا نشد یا قبلا حذف شده.',
@@ -845,8 +832,8 @@ if (data.startsWith('squad_delete_noback_') && userId === adminId) {
   }
 
   await update(squadReqRef(reqId), { deleted: true });
-  await bot.sendMessage(req.user_id, `⏳ مهلت نمایش اسکواد شما به پایان رسید. جهت قرارگیری مجدد، لطفاً دوباره اسکواد خود را ثبت کنید.`);
-  await bot.answerCallbackQuery(query.id, { text: 'با موفقیت حذف شد (بدون بازگشت امتیاز).', show_alert: true });
+  await bot.sendMessage(req.user_id, '⏰ مهلت نمایش اسکواد شما به پایان رسیده است. برای ثبت مجدد، لطفاً دوباره اقدام کنید.');
+  await bot.answerCallbackQuery(query.id, { text: '✅ حذف شد بدون امتیاز.' });
   return;
 }
 
