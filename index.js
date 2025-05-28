@@ -742,34 +742,35 @@ if (data === 'hero_counter') {
     return;
   }
 
-  // ---- مدیریت اسکواد: حذف اسکواد تایید شده (ادمین) ----
-  if (data === 'admin_delete_approved_squads' && userId === adminId) {
-    const approvedReqs = await getAllSquadReqs({ approved: true });
-    if (!approvedReqs.length) {
-      await bot.answerCallbackQuery(query.id);
-      return bot.sendMessage(userId, 'اسکواد تاییدشده‌ای برای حذف وجود ندارد.');
-    }
-    showAdminApprovedSquadCard(userId, approvedReqs, 0);
-    await bot.answerCallbackQuery(query.id);
-    return;
-  }
-  if (data.startsWith('admin_approved_squad_card_') && userId === adminId) {
-    const idx = parseInt(data.replace('admin_approved_squad_card_', ''));
-    const approvedReqs = await getAllSquadReqs({ approved: true });
-    showAdminApprovedSquadCard(userId, approvedReqs, idx);
-    await bot.answerCallbackQuery(query.id);
-    return;
-  }
-  if (data.startsWith('admin_delete_approved_squadreq_') && userId === adminId) {
-    const reqId = data.replace('admin_delete_approved_squadreq_', '');
-    const req = await getSquadReq(reqId);
-    if (!req || req.deleted)
-      return bot.answerCallbackQuery(query.id, { text: 'اسکواد پیدا نشد یا قبلا حذف شده.', show_alert: true });
-    await update(squadReqRef(reqId), { deleted: true });
-    await bot.sendMessage(req.user_id, `اسکواد شما توسط مدیریت حذف شد.`);
-    await bot.answerCallbackQuery(query.id, { text: 'اسکواد حذف شد.' });
-    return;
-  }
+  // ---- مدیریت اسکواد: حذف اسکواد تایید شده (ادمین) ---
+  
+  // حذف با بازگرداندن امتیاز
+if (data.startsWith('admin_delete_squad_with_points_') && userId === adminId) {
+  const reqId = data.replace('admin_delete_squad_with_points_', '');
+  const req = await getSquadReq(reqId);
+  if (!req || req.deleted)
+    return bot.answerCallbackQuery(query.id, { text: 'اسکواد پیدا نشد یا قبلا حذف شده.', show_alert: true });
+
+  await update(squadReqRef(reqId), { deleted: true });
+  await updatePoints(req.user_id, 5); // بازگرداندن ۵ امتیاز
+  await bot.sendMessage(req.user_id, 'اسکواد شما توسط مدیریت حذف شد و ۵ امتیاز به شما بازگردانده شد.');
+  await bot.answerCallbackQuery(query.id, { text: '✅ اسکواد حذف شد + امتیاز بازگشت.' });
+  return;
+}
+
+// حذف بدون بازگرداندن امتیاز
+if (data.startsWith('admin_delete_squad_no_points_') && userId === adminId) {
+  const reqId = data.replace('admin_delete_squad_no_points_', '');
+  const req = await getSquadReq(reqId);
+  if (!req || req.deleted)
+    return bot.answerCallbackQuery(query.id, { text: 'اسکواد پیدا نشد یا قبلا حذف شده.', show_alert: true });
+
+  await update(squadReqRef(reqId), { deleted: true });
+  await bot.sendMessage(req.user_id, '⏰ مهلت نمایش اسکواد شما به پایان رسیده است. برای ثبت مجدد، لطفاً دوباره اقدام کنید.');
+  await bot.answerCallbackQuery(query.id, { text: '❌ اسکواد حذف شد بدون بازگشت امتیاز.' });
+  return;
+}
+  
 
   // ---- اسکواد: تایید توسط ادمین ----
   if (data.startsWith('approve_squadreq_') && userId === adminId) {
@@ -815,7 +816,7 @@ if (data.startsWith('squaddelete_withpoints_') && userId === adminId) {
 
   await update(squadReqRef(reqId), { deleted: true });
   await updatePoints(req.user_id, 5);
-  await bot.sendMessage(req.user_id, `درخواست اسکواد شما توسط مدیریت حذف شد و ۵ امتیاز به حساب شما بازگردانده شد.`);
+  await bot.sendMessage(req.user_id, `درخواست اسکواد شما توسط مدیریت رد شد و 5 امتیاز به حساب شما بازگردانده شد.`);
   await bot.answerCallbackQuery(query.id, { text: '✅ حذف شد + امتیاز برگشت.' });
   return;
 }
@@ -832,7 +833,7 @@ if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
   }
 
   await update(squadReqRef(reqId), { deleted: true });
-  await bot.sendMessage(req.user_id, '⏰ مهلت نمایش اسکواد شما به پایان رسیده است. برای ثبت مجدد، لطفاً دوباره اقدام کنید.');
+  await bot.sendMessage(req.user_id, '❌به دلایلی اسکواد شما توسط مدیریت ما لغو شد');
   await bot.answerCallbackQuery(query.id, { text: '✅ حذف شد بدون امتیاز.' });
   return;
 }
