@@ -787,13 +787,66 @@ if (data === 'hero_counter') {
   // ---- اسکواد: حذف فقط توسط ادمین ----
 if (data.startsWith('delete_squadreq_') && userId === adminId) {
   const reqId = data.replace('delete_squadreq_', '');
+
   const req = await getSquadReq(reqId);
-  if (!req || req.deleted)
-    return bot.answerCallbackQuery(query.id, { text: 'درخواست پیدا نشد یا قبلا حذف شده.', show_alert: true });
+  if (!req || req.deleted) {
+    return bot.answerCallbackQuery(query.id, {
+      text: 'درخواست پیدا نشد یا قبلا حذف شده.',
+      show_alert: true
+    });
+  }
+
+  // نمایش پنل انتخاب نوع حذف
+  await bot.sendMessage(userId, `نحوه حذف درخواست اسکواد کاربر ${req.user_id} را انتخاب کنید:`, {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '🟢 حذف + بازگرداندن ۵ سکه', callback_data: `squad_delete_back_${reqId}` }
+        ],
+        [
+          { text: '🔴 فقط حذف (بدون بازگشت سکه)', callback_data: `squad_delete_noback_${reqId}` }
+        ]
+      ]
+    }
+  });
+
+  await bot.answerCallbackQuery(query.id);
+  return;
+}
+
+
+// حذف با بازگرداندن امتیاز
+if (data.startsWith('squad_delete_back_') && userId === adminId) {
+  const reqId = data.replace('squad_delete_back_', '');
+  const req = await getSquadReq(reqId);
+  if (!req || req.deleted) {
+    return bot.answerCallbackQuery(query.id, {
+      text: 'درخواست پیدا نشد یا قبلا حذف شده.',
+      show_alert: true
+    });
+  }
+
   await update(squadReqRef(reqId), { deleted: true });
-  await updatePoints(req.user_id, 5); // پنج سکه به کاربر برگردان
+  await updatePoints(req.user_id, 5);
   await bot.sendMessage(req.user_id, `درخواست اسکواد شما توسط مدیریت حذف شد و ۵ سکه به حساب شما بازگردانده شد.`);
-  await bot.answerCallbackQuery(query.id, { text: 'درخواست حذف شد و امتیاز بازگردانده شد.' });
+  await bot.answerCallbackQuery(query.id, { text: 'با موفقیت حذف شد و امتیاز برگشت.', show_alert: true });
+  return;
+}
+
+// حذف بدون بازگرداندن امتیاز
+if (data.startsWith('squad_delete_noback_') && userId === adminId) {
+  const reqId = data.replace('squad_delete_noback_', '');
+  const req = await getSquadReq(reqId);
+  if (!req || req.deleted) {
+    return bot.answerCallbackQuery(query.id, {
+      text: 'درخواست پیدا نشد یا قبلا حذف شده.',
+      show_alert: true
+    });
+  }
+
+  await update(squadReqRef(reqId), { deleted: true });
+  await bot.sendMessage(req.user_id, `⏳ مهلت نمایش اسکواد شما به پایان رسید. جهت قرارگیری مجدد، لطفاً دوباره اسکواد خود را ثبت کنید.`);
+  await bot.answerCallbackQuery(query.id, { text: 'با موفقیت حذف شد (بدون بازگشت امتیاز).', show_alert: true });
   return;
 }
 
