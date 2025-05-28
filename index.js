@@ -1151,6 +1151,7 @@ if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
 // ... ناحیه message handler بدون تغییر، فقط بخش stateهای جدید اضافه شود
 bot.on('message', async (msg) => {
   const userId = msg.from.id;
+  const state = userState[userId];
   const text = msg.text || '';
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
@@ -1197,7 +1198,7 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
   return bot.sendMessage(userId, 'درخواست پیدا کردن هم‌تیمی لغو شد.');
 }
 
-  const state = userState[userId];
+  
   if (!state) return;
   if (text === '/cancel') {
     userState[userId] = null;
