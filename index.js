@@ -3,7 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
-
+const lastAction = {};
 const app = express();
 const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
@@ -1190,6 +1190,7 @@ bot.on('callback_query', async (query) => {
   } finally {
     if (userId !== adminId) userBusy[userId] = false;
   }
+});
 
 // ---- اداره مراحل ثبت اسکواد ----
 // ... ناحیه message handler بدون تغییر، فقط بخش stateهای جدید اضافه شود
