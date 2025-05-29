@@ -211,10 +211,8 @@ function mainMenuKeyboard() {
       { text: '🧩 تورنومنت', callback_data: 'tournament' }
     ],
     [
-      { text: '📜 لیست پیک/بن', callback_data: 'pickban_list' }
-    ],
-    [
-              { text: '🎯 رندوم پیک', callback_data: 'pick_hero' }
+          { text: '📜 لیست پیک و بن', callback_data: 'pickban_list' },
+      { text: '🎯 رندوم پیک', callback_data: 'pick_hero' }
         ],
         [
       { text: '🔥 چالش', callback_data: 'challenge' }
@@ -228,23 +226,19 @@ function mainMenuKeyboard() {
       { text: '👥 مشاهده اسکوادها', callback_data: 'view_squads' }
     ],
     [
-              { text: '📰 اخبار بازی', callback_data: 'ml_news' }
+                  { text: '📰 اخبار بازی', callback_data: 'ml_news' }
     ],
     [
-      { text: '💬پشتیبانی', callback_data: 'support' }
-    ],
-    [
+          { text: '💬پشتیبانی', callback_data: 'support' },
       { text: '📚راهنما', callback_data: 'help' }
     ],
     [
-      { text: '💰خرید امتیاز', callback_data: 'buy' }
-    ],
-    [
-      { text: '🍀 شانس', callback_data: 'chance' },
-      { text: '🎁 کد هدیه', callback_data: 'gift_code' }
-    ]
+     { text: '🎁 کد هدیه', callback_data: 'gift_code' },
+        { text: '💰 خرید امتیاز', callback_data: 'buy' },
+        { text: '🍀 شانس', callback_data: 'chance' }
       ]
-    }
+    ]
+  }
   };
 }
 function sendMainMenu(userId, from = {}, messageId = null, currentText = null, currentMarkup = null) {
