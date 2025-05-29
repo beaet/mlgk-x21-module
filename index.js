@@ -392,7 +392,7 @@ bot.on('callback_query', async (query) => {
   const data = query.data;
   const chat_id = query.message.chat.id;
   const message_id = query.message.message_id; // این خط درست و کافی است
-
+  const messageId = query.message.message_id;
   const blockedBtn = MENU_BUTTONS.find(btn => btn.key === data);
   if (blockedBtn && !(await isButtonEnabled(data)) && userId !== adminId) {
     return bot.answerCallbackQuery(query.id, { text: '⏰این بخش موقتا از دسترس خارج شده', show_alert: true });
@@ -715,7 +715,7 @@ if (data === 'hero_counter') {
   // ---- Main menu back ----
   if (data === 'main_menu') {
     await bot.answerCallbackQuery(query.id);
-    sendMainMenu(userId, messageId);
+    sendMainMenu(userId, messaged);
     return;
   }
 
