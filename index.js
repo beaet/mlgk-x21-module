@@ -200,7 +200,7 @@ function mainMenuKeyboard() {
     reply_markup: {
       inline_keyboard: [
     [
-          { text: '🎲 پیدا کردن هم‌‌تیمی رندوم', callback_data: 'find_teammate' }
+          { text: '🎲 پیداکردن هم‌‌ تیمی رندوم', callback_data: 'find_teammate' }
     ],
     [
       { text: '📊محاسبه ریت', callback_data: 'calculate_rate' },
@@ -369,7 +369,7 @@ bot.onText(/\/panel/, async (msg) => {
 // ---- CALLBACK QUERIES ----
 bot.on('callback_query', async (query) => {
   if (!botActive && query.from.id !== adminId) {
-    await bot.answerCallbackQuery(query.id, { text: 'ربات موقتاً خاموش است.', show_alert: true });
+    await bot.answerCallbackQuery(query.id, { text: '⏳ربات موقتاً خاموش است.', show_alert: true });
     return;
   }
 
@@ -378,7 +378,7 @@ bot.on('callback_query', async (query) => {
   const messageId = query.message && query.message.message_id;
   const blockedBtn = MENU_BUTTONS.find(btn => btn.key === data);
 if (blockedBtn && !(await isButtonEnabled(data)) && userId !== adminId) {
-  return bot.answerCallbackQuery(query.id, { text: 'این بخش موقتا از دسترس خارج شده', show_alert: true });
+  return bot.answerCallbackQuery(query.id, { text: '⏰این بخش موقتا از دسترس خارج شده', show_alert: true });
 }
   const validPickRoles = ['pick_XP', 'pick_Gold', 'pick_Mid', 'pick_Roamer', 'pick_Jungle'];
   const currentText = query.message.text;
@@ -442,19 +442,19 @@ if (data === 'find_teammate') {
   const maxDailyChance = match.getMaxDailyChance(user);
   const usedChance = user.findChanceUsed || 0;
   if (usedChance >= maxDailyChance) {
-    return bot.answerCallbackQuery(query.id, { text: `سقف شانس امروزیت پره! برای هر ۵ دعوت یک شانس جدید می‌گیری.`, show_alert: true });
+    return bot.answerCallbackQuery(query.id, { text: `🔖سقف شانس امروزیت پره! برای هر ۵ دعوت هر روز یک شانس بیشتر می‌گیری.`, show_alert: true });
   }
   userState[userId] = { step: 'find_teammate_category' };
   await bot.answerCallbackQuery(query.id);
-  return bot.sendMessage(userId, `شانس امروز شما: ${maxDailyChance - usedChance} از ${maxDailyChance}\nنوع بازی رو انتخاب کن:`, {
+  return bot.sendMessage(userId, `شانس امروز شما: ${maxDailyChance - usedChance} از ${maxDailyChance}\n🎮نوع بازی رو انتخاب کن:`, {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: 'رنک', callback_data: 'find_teammate_ranked' },
-          { text: 'کلاسیک', callback_data: 'find_teammate_classic' }
+          { text: '🏆رنک', callback_data: 'find_teammate_ranked' },
+          { text: '🏝️کلاسیک', callback_data: 'find_teammate_classic' }
         ],
-        [{ text: 'اطلاعات من', callback_data: 'find_teammate_profile' }],
-        [{ text: 'بازگشت', callback_data: 'main_menu' }]
+        [{ text: '🧭اطلاعات من', callback_data: 'find_teammate_profile' }],
+        [{ text: '🔙بازگشت', callback_data: 'main_menu' }]
       ]
     }
   });
@@ -476,8 +476,17 @@ if (data === 'find_teammate_profile') {
 
 
 if (data === 'anon_cancel') {
-  match.leaveChat(userId, userState, bot, true, db);
-  await bot.answerCallbackQuery(query.id, { text: 'چت لغو شد.', show_alert: true });
+  // اگر قبلا لغو نکرده بود
+  if (!userState[userId]?.anon_canceled) {
+    match.leaveChat(userId, userState, bot, true, db);
+    if (!userState[userId]) userState[userId] = {};
+    userState[userId].anon_canceled = true;
+    await bot.sendMessage(userId, '✅ چت با موفقیت لغو شد.');
+    await bot.answerCallbackQuery(query.id); // فقط بسته شدن دکمه
+  } else {
+    // اگر قبلا لغو کرده بود
+    await bot.answerCallbackQuery(query.id, { text: '⛔ شما چت را قبلاً لغو کرده‌اید.', show_alert: true });
+  }
   return;
 }
 if (data === 'anon_accept') {
@@ -485,10 +494,10 @@ if (data === 'anon_accept') {
   if (partnerId && userState[partnerId] && userState[partnerId].step === 'in_anonymous_chat') {
     userState[userId] = null;
     userState[partnerId] = null;
-    await bot.sendMessage(partnerId, 'هم‌تیمی شما چت را با موفقیت تایید کرد. موفق باشید!');
-    await bot.sendMessage(userId, 'چت با موفقیت پایان یافت.');
+    await bot.sendMessage(partnerId, '✅هم‌تیمی شما چت را با موفقیت و رضایت به پایان رساند. موفق باشید!');
+    await bot.sendMessage(userId, '✅چت با موفقیت پایان یافت ربات را /start کنید.');
   }
-  await bot.answerCallbackQuery(query.id, { text: 'چت پایان یافت.' });
+  await bot.answerCallbackQuery(query.id, { text: '✅چت پایان یافت ربات را /start کنید.' });
   return;
 }
 
@@ -497,14 +506,6 @@ if (data === 'edit_chance' && userId === adminId) {
   await bot.answerCallbackQuery(query.id);
   return bot.sendMessage(userId, 'آیدی عددی کاربر را وارد کنید:');
 }
-
-
-if (data === 'find_teammate_profile') {
-  userState[userId] = { step: 'ask_rank', teammateProfile: {} };
-  await bot.answerCallbackQuery(query.id);
-  return bot.sendMessage(userId, '🏅 رنکت چیه؟ (مثلا: اپیک، لجند، میتیک)');
-}
-
 
 
 // دکمه رندوم پیک
@@ -687,11 +688,11 @@ if (data === 'profile') {
     `🆔 آیدی عددی: ${userId}\n` +
     `⭐ امتیاز فعلی: ${user.points}\n` +
     `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
-    `🎲 شانس روزانه هم‌تیمی: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
+    `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
     `🏅 رنک: ${rank}\n` +
     `🦸‍♂️ هیرو مین: ${mainHero}\n` +
     `🎯 رول اصلی: ${mainRole}\n` +
-    `🆔/🎮 آیدی عددی/اسم: ${gameId}`;
+    `🆔آیدی عددی یا اسم: ${gameId}`;
   return bot.sendMessage(userId, profileMessage, {
     reply_markup: {
       inline_keyboard: [
