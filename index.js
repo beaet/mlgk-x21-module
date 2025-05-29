@@ -440,7 +440,7 @@ bot.on('callback_query', async (query) => {
   const cooldownRef = ref(db, `cooldowns/news/${userId}`);
   const cooldownSnap = await get(cooldownRef);
   const now = Date.now();
-
+lastAction[userId] = now;
   if (cooldownSnap.exists()) {
     const lastUsed = cooldownSnap.val();
     const secondsPassed = Math.floor((now - lastUsed) / 1000);
