@@ -32,6 +32,8 @@ const MENU_BUTTONS = [
   { key: 'buy', label: '💰خرید امتیاز' },
   { key: 'chance', label: '🍀 شانس' },
   { key: 'gift_code', label: '🎁 کد هدیه' }
+    { key: 'ml_news', label: '📰 اخبار بازی' },
+  { key: 'find_teammate', label: '🎲 پیداکردن هم‌‌ تیمی رندوم' }
 ];
 // ---- Firebase Config ----
 const firebaseConfig = {
@@ -199,48 +201,61 @@ function mainMenuKeyboard() {
   return {
     reply_markup: {
       inline_keyboard: [
-    [
+        [
           { text: '🎲 پیداکردن هم‌‌ تیمی رندوم', callback_data: 'find_teammate' }
-    ],
-    [
-      { text: '📊محاسبه ریت', callback_data: 'calculate_rate' },
-      { text: '🏆محاسبه برد و باخت', callback_data: 'calculate_wl' }
-    ],
-    [
-      { text: '⚔ هیرو کانتر', callback_data: 'hero_counter' },
-      { text: '🧩 تورنومنت', callback_data: 'tournament' }
-    ],
-    [
-          { text: '📜 لیست پیک و بن', callback_data: 'pickban_list' },
-      { text: '🎯 رندوم پیک', callback_data: 'pick_hero' }
         ],
         [
-      { text: '🔥 چالش', callback_data: 'challenge' }
-    ],
-    [
-      { text: '🔗دعوت دوستان', callback_data: 'referral' },
-      { text: '👤 پروفایل', callback_data: 'profile' }
-    ],
-    [
-      { text: '➕ ثبت درخواست اسکواد', callback_data: 'squad_request' },
-      { text: '👥 مشاهده اسکوادها', callback_data: 'view_squads' }
-    ],
-    [
-                  { text: '📰 اخبار بازی', callback_data: 'ml_news' }
-    ],
-    [
-          { text: '💬پشتیبانی', callback_data: 'support' },
-      { text: '📚راهنما', callback_data: 'help' }
-    ],
-    [
-     { text: '🎁 کد هدیه', callback_data: 'gift_code' },
-        { text: '💰 خرید امتیاز', callback_data: 'buy' },
-        { text: '🍀 شانس', callback_data: 'chance' }
+          { text: '🕹 ابزار بازی', callback_data: 'tools_menu' }
+        ],
+        [
+          { text: '🔥 چالش', callback_data: 'challenge' }
+        ],
+        [
+          { text: '🔗 دعوت دوستان', callback_data: 'referral' },
+          { text: '👤 پروفایل', callback_data: 'profile' }
+        ],
+        [
+          { text: '➕ ثبت درخواست اسکواد', callback_data: 'squad_request' },
+          { text: '👥 مشاهده اسکوادها', callback_data: 'view_squads' }
+        ],
+        [
+                  { text: '📰 اخبار بازی', callback_data: 'ml_news' },
+          { text: '💬 پشتیبانی', callback_data: 'support' },
+          { text: '📚 راهنما', callback_data: 'help' }
+        ],
+        [
+          { text: '🎁 کد هدیه', callback_data: 'gift_code' },
+          { text: '💰 خرید امتیاز', callback_data: 'buy' },
+          { text: '🍀 شانس', callback_data: 'chance' }
+        ]
       ]
-    ]
-  }
+    }
   };
 }
+
+function toolsMenuKeyboard() {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '📊 محاسبه ریت', callback_data: 'calculate_rate' },
+          { text: '🏆 محاسبه برد و باخت', callback_data: 'calculate_wl' }
+        ],
+        [
+          { text: '⚔ هیرو کانتر', callback_data: 'hero_counter' },
+          { text: '🎯 رندوم پیک', callback_data: 'pick_hero' }
+        ],
+        [
+          { text: '📜 لیست پیک و بن', callback_data: 'pickban_list' }
+        ],
+        [
+          { text: '⬅️ بازگشت', callback_data: 'back_to_main' }
+        ]
+      ]
+    }
+  };
+}
+
 function sendMainMenu(userId, from = {}, messageId = null, currentText = null, currentMarkup = null) {
   const name = from.first_name || 'دوست عزیز';
   const text = `سلام ${name}، به ربات محاسبه‌گر Mobile Legends خوش آمدید ✨`;
@@ -385,6 +400,21 @@ if (blockedBtn && !(await isButtonEnabled(data)) && userId !== adminId) {
   const currentMarkup = query.message.reply_markup || null;
 
   // فرض بر این که می‌خواهی منوی اصلی را نمایش بدهی
+  if (data === 'tools_menu') {
+    return bot.editMessageText('🕹 ابزارهای بازی رو انتخاب کن:', {
+      chat_id,
+      message_id,
+      ...toolsMenuKeyboard()
+    });
+  }
+
+  if (data === 'back_to_main') {
+    return bot.editMessageText('سلام! به منوی اصلی برگشتی ✨', {
+      chat_id,
+      message_id,
+      ...mainMenuKeyboard()
+    });
+  }
   
   if (data === 'ml_news') {
   const cooldownRef = ref(db, `cooldowns/news/${userId}`);
