@@ -383,15 +383,16 @@ bot.onText(/\/panel/, async (msg) => {
 
 // ---- CALLBACK QUERIES ----
 bot.on('callback_query', async (query) => {
-  try {
+  // تعریف متغیرهای لازم قبل از try
   const userId = query.from.id;
-    const data = query.data;
-    const chat_id = query.message.chat.id;
-    const message_id = query.message.message_id;
+  const data = query.data;
+  const chat_id = query.message.chat.id;
+  const message_id = query.message.message_id;
 
+  try {
     const blockedBtn = MENU_BUTTONS.find(btn => btn.key === data);
-  
-    if (!botActive && query.from.id !== adminId) {
+
+    if (!botActive && userId !== adminId) {
       await bot.answerCallbackQuery(query.id, { text: '⏳ربات موقتاً خاموش است.', show_alert: true });
       return;
     }
@@ -1202,7 +1203,7 @@ bot.on('message', async (msg) => {
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
   
-  console.log('state:', state, 'userId:', userId, 'text:', text);
+  console.log('state:', state, 'userId:', userId, 'text:', text); 
 
   if (state && state.step === 'ask_rank') {
     state.teammateProfile.rank = text;
