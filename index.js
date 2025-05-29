@@ -1176,12 +1176,12 @@ bot.on('callback_query', async (query) => {
         const users = snap.exists() ? Object.values(snap.val()) : [];
         const activeUsers = users.filter(u => !u.banned);
         const bannedUsers = users.filter(u => u.banned);
-        await bot.answerCallbackQuery(query.id);
-        return bot.sendMessage(userId, `👥 کاربران کل: ${users.length}\n✅ کاربران فعال: ${activeUsers.length}\n⛔ کاربران بن شده: ${bannedUsers.length}`);
-      default:
-        await bot.answerCallbackQuery(query.id);
-        break;
-    }
+      await bot.answerCallbackQuery(query.id);
+      return bot.sendMessage(userId, `👥 کاربران کل: ${users.length}\n✅ کاربران فعال: ${activeUsers.length}\n⛔ کاربران بن شده: ${bannedUsers.length}`);
+    default:
+      await bot.answerCallbackQuery(query.id);
+      break;
+  }
 });
 
 // ---- اداره مراحل ثبت اسکواد ----
