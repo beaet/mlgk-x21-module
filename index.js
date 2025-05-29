@@ -3,7 +3,8 @@ const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
-
+const userBusy = {};
+const userCooldown = {};
 const app = express();
 const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
@@ -277,6 +278,8 @@ function sendMainMenu(userId, from = {}, messageId = null, currentText = null, c
 // ---- /start with referral ----
 bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   const userId = msg.from.id;
+  delete userState[userId];
+  delete userBusy[userId];
   const refId = match[1] ? parseInt(match[1]) : null;
   
   if (!botActive && msg.from.id !== adminId) {
@@ -401,6 +404,25 @@ bot.on('callback_query', async (query) => {
   const validPickRoles = ['pick_XP', 'pick_Gold', 'pick_Mid', 'pick_Roamer', 'pick_Jungle'];
   const currentText = query.message.text;
   const currentMarkup = query.message.reply_markup || null;
+  
+  
+  // ⏱ جلوگیری از اسپم با فاصله زمانی کوتاه (2 ثانیه)
+  if (userCooldown[userId] && now - userCooldown[userId] < 2000) {
+    return bot.answerCallbackQuery(query.id, {
+      text: "⌛ لطفاً کمی صبر کنید.",
+      show_alert: false
+    });
+  }
+  userCooldown[userId] = now;
+
+  // ⛔ جلوگیری از اجرای همزمان عملیات
+  if (userBusy[userId]) {
+    return bot.answerCallbackQuery(query.id, {
+      text: "⏳ لطفاً صبر کنید، عملیات قبلی هنوز تموم نشده.",
+      show_alert: true
+    });
+  }
+  userBusy[userId] = true;
 
   if (data === 'tools_menu') {
     return bot.editMessageText('🕹 ابزارهای بازی رو انتخاب کن:', {
@@ -1217,6 +1239,7 @@ if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
       break;
   }
 });
+
 
 // ---- اداره مراحل ثبت اسکواد ----
 // ... ناحیه message handler بدون تغییر، فقط بخش stateهای جدید اضافه شود
