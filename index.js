@@ -6,6 +6,7 @@ const { getDatabase, ref, set, get, update, remove, push } = require('firebase/d
 const userBusy = {};
 const userCooldown = {};
 const app = express();
+const spamTracker = {};
 const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
 const match = require('./match');
@@ -406,23 +407,40 @@ const now = Date.now();
   const currentMarkup = query.message.reply_markup || null;
   
   
-  // ⏱ جلوگیری از اسپم با فاصله زمانی کوتاه (2 ثانیه)
-  if (userCooldown[userId] && now - userCooldown[userId] < 2000) {
-    return bot.answerCallbackQuery(query.id, {
-      text: "⌛ لطفاً کمی صبر کنید.",
-      show_alert: false
-    });
-  }
-  userCooldown[userId] = now;
+  
+  // ⛔ رد کردن بررسی برای ادمین
+  if (userId !== ADMIN_ID) {
+    // بررسی بن موقت
+    if (spamTracker[userId]?.isBanned && now < spamTracker[userId].isBannedUntil) {
+      return bot.answerCallbackQuery(query.id, {
+        text: "⛔ به‌دلیل کلیک زیاد، برای یک دقیقه مسدود شده‌اید.",
+        show_alert: true
+      });
+    }
 
-  // ⛔ جلوگیری از اجرای همزمان عملیات
-  if (userBusy[userId]) {
-    return bot.answerCallbackQuery(query.id, {
-      text: "⏳ لطفاً صبر کنید، عملیات قبلی هنوز تموم نشده.",
-      show_alert: true
-    });
+    // ثبت تعداد کلیک
+    if (!spamTracker[userId]) {
+      spamTracker[userId] = { count: 1, lastClick: now };
+    } else {
+      const diff = now - spamTracker[userId].lastClick;
+      if (diff < 3000) {
+        spamTracker[userId].count++;
+      } else {
+        spamTracker[userId].count = 1;
+      }
+      spamTracker[userId].lastClick = now;
+    }
+
+    // اعمال بن موقت
+    if (spamTracker[userId].count >= 3) {
+      spamTracker[userId].isBanned = true;
+      spamTracker[userId].isBannedUntil = now + 60000; // 60 ثانیه بن
+      return bot.answerCallbackQuery(query.id, {
+        text: "🚫 اسپم دکمه! تا 1 دقیقه مسدود شدید.",
+        show_alert: true
+      });
+    }
   }
-  userBusy[userId] = true;
 
   if (data === 'tools_menu') {
     return bot.editMessageText('🕹 ابزارهای بازی رو انتخاب کن:', {
@@ -1233,6 +1251,7 @@ if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
       await bot.answerCallbackQuery(query.id);
       return bot.sendMessage(userId, `👥 کاربران کل: ${users.length}\n✅ کاربران فعال: ${activeUsers.length}\n⛔ کاربران بن شده: ${bannedUsers.length}`);
     default:
+      console.error(`❌ Unhandled callback data: "${data}" from userId: ${userId}`);
       await bot.answerCallbackQuery(query.id);
       break;
   }
