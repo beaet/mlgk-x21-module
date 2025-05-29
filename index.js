@@ -496,9 +496,11 @@ if (data === 'anon_accept') {
 }
 
 
-
-
-
+if (data === 'find_teammate_profile') {
+  userState[userId] = { step: 'ask_rank', teammateProfile: {} };
+  await bot.answerCallbackQuery(query.id);
+  return bot.sendMessage(userId, '🏅 رنکت چیه؟ (مثلا: اپیک، لجند، میتیک)');
+}
 
 
 
@@ -1200,6 +1202,28 @@ if (state && state.step === 'in_anonymous_chat' && state.chatPartner) {
   const partnerId = state.chatPartner;
   if (userState[partnerId] && userState[partnerId].chatPartner === userId) {
     await bot.sendMessage(partnerId, `ناشناس: ${text}`);
+    
+    if (state && state.step === 'ask_rank') {
+  state.teammateProfile.rank = text;
+  state.step = 'ask_mainHero';
+  return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
+}
+if (state && state.step === 'ask_mainHero') {
+  state.teammateProfile.mainHero = text;
+  state.step = 'ask_mainRole';
+  return bot.sendMessage(userId, '🎯 بیشتر چه رولی پلی می‌دی؟ (مثلا: تانک، ساپورت، مید)');
+}
+if (state && state.step === 'ask_mainRole') {
+  state.teammateProfile.mainRole = text;
+  state.step = 'ask_gameId';
+  return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
+}
+if (state && state.step === 'ask_gameId') {
+  state.teammateProfile.gameId = text || 'اختیاری/نامشخص';
+  await update(userRef(userId), { teammate_profile: state.teammateProfile });
+  userState[userId] = null;
+  return bot.sendMessage(userId, '✅ اطلاعات شما ذخیره شد! از دکمه پروفایل می‌تونی ببینی.');
+}
 
     // ذخیره پیام
     const key = match.getChatKey(userId, partnerId);
@@ -1442,33 +1466,6 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
     return bot.sendMessage(userId, 'کد نامعتبر است یا منقضی شده است.');
   }
 
-if (data === 'find_teammate_profile') {
-  userState[userId] = { step: 'ask_rank', teammateProfile: {} };
-  await bot.answerCallbackQuery(query.id);
-  return bot.sendMessage(userId, '🏅 رنکت چیه؟ (مثلا: اپیک، لجند، میتیک)');
-}
-
-if (state && state.step === 'ask_rank') {
-  state.teammateProfile.rank = text;
-  state.step = 'ask_mainHero';
-  return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
-}
-if (state && state.step === 'ask_mainHero') {
-  state.teammateProfile.mainHero = text;
-  state.step = 'ask_mainRole';
-  return bot.sendMessage(userId, '🎯 بیشتر چه رولی پلی می‌دی؟ (مثلا: تانک، ساپورت، مید)');
-}
-if (state && state.step === 'ask_mainRole') {
-  state.teammateProfile.mainRole = text;
-  state.step = 'ask_gameId';
-  return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
-}
-if (state && state.step === 'ask_gameId') {
-  state.teammateProfile.gameId = text || 'اختیاری/نامشخص';
-  await update(userRef(userId), { teammate_profile: state.teammateProfile });
-  userState[userId] = null;
-  return bot.sendMessage(userId, '✅ اطلاعات شما ذخیره شد! از دکمه پروفایل می‌تونی ببینی.');
-}
 
   // ---- اداره مراحل ثبت اسکواد ----
   if (state.step === 'squad_name') {
