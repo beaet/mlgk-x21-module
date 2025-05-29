@@ -1182,16 +1182,6 @@ bot.on('callback_query', async (query) => {
         await bot.answerCallbackQuery(query.id);
         break;
     }
-  } catch (error) {
-    console.error("خطا در callback_query:", error);
-    let errorMsg = "❌ مشکلی پیش اومد. لطفا بعداً امتحان کن.";
-    if (error.response && error.response.statusCode === 429) {
-      errorMsg = "❗️ تعداد درخواست‌ها زیاد شد. لطفاً کمی صبر کن.";
-    }
-    await bot.answerCallbackQuery(query.id, { text: errorMsg, show_alert: true });
-  } finally {
-    if (userId !== adminId) userBusy[userId] = false;
-  }
 });
 
 // ---- اداره مراحل ثبت اسکواد ----
