@@ -1207,55 +1207,66 @@ if (!botActive && msg.from.id !== adminId) {
     return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده ندارید.');
   }
   
+  if (userId === adminId && state && state.step === 'edit_chance_enter_id') {
+  if (!/^\d+$/.test(text)) return bot.sendMessage(userId, 'آیدی عددی معتبر وارد کن.');
+  state.targetUserId = text.trim();
+  state.step = 'edit_chance_enter_value';
+  return bot.sendMessage(userId, 'عدد شانس روزانه جدید را وارد کن (مثلاً 8). اگر می‌خواهی به حالت اتومات برگردد، عدد 0 را وارد کن:');
+}
+if (userId === adminId && state && state.step === 'edit_chance_enter_value') {
+  const val = parseInt(text);
+  if (isNaN(val) || val < 0) return bot.sendMessage(userId, 'عدد معتبر وارد کن.');
+  if (val === 0) {
+    await update(ref(db, `users/${state.targetUserId}`), { maxDailyChance: null });
+    userState[userId] = null;
+    return bot.sendMessage(userId, `شانس روزانه کاربر ${state.targetUserId} به حالت اتومات برگشت (بر اساس تعداد دعوتی‌ها).`);
+  } else {
+    await update(ref(db, `users/${state.targetUserId}`), {
+      maxDailyChance: val,
+      findChanceUsed: 0
+    });
+    userState[userId] = null;
+    return bot.sendMessage(userId, `شانس روزانه کاربر ${state.targetUserId} به ${val}/${val} تنظیم و مقدار استفاده ریست شد.`);
+  }
+}
+  
 if (state && state.step === 'in_anonymous_chat' && state.chatPartner) {
   const partnerId = state.chatPartner;
   if (userState[partnerId] && userState[partnerId].chatPartner === userId) {
     await bot.sendMessage(partnerId, `ناشناس: ${text}`);
     
-    if (userId === adminId && state && state.step === 'edit_chance_enter_id') {
-  if (!/^\d+$/.test(text)) return bot.sendMessage(userId, 'آیدی عددی معتبر وارد کن.');
-  state.targetUserId = text;
-  state.step = 'edit_chance_enter_value';
-  return bot.sendMessage(userId, 'عدد شانس روزانه جدید را وارد کن (مثلاً 8):');
-}
-if (userId === adminId && state && state.step === 'edit_chance_enter_value') {
-  const val = parseInt(text);
-  if (isNaN(val) || val < 0) return bot.sendMessage(userId, 'عدد معتبر وارد کن.');
-  // بروزرسانی هر دو مقدار findChanceUsed و maxDailyChance اختیاری است
-  await update(ref(db, `users/${state.targetUserId}`), {
-    findChanceUsed: 0, // ریست استفاده شده
-    maxDailyChance: val // ذخیره مقدار دلخواه
-  });
-  userState[userId] = null;
-  return bot.sendMessage(userId, `شانس روزانه کاربر ${state.targetUserId} به ${val}/${val} تنظیم شد و مقدار استفاده ریست شد.`);
-}
     
 // در message handler:
+
+console.log('userState:', state, 'msg:', text);
+
 if (state && state.step === 'ask_rank') {
   state.teammateProfile = state.teammateProfile || {};
   state.teammateProfile.rank = text;
   state.step = 'ask_mainHero';
   return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
 }
-if (state && state.step === 'ask_mainHero') {
-  state.teammateProfile = state.teammateProfile || {};
-  state.teammateProfile.mainHero = text;
-  state.step = 'ask_mainRole';
-  return bot.sendMessage(userId, '🎯 بیشتر چه رولی پلی می‌دی؟ (مثلا: تانک، ساپورت، مید)');
-}
-if (state && state.step === 'ask_mainRole') {
-  state.teammateProfile = state.teammateProfile || {};
-  state.teammateProfile.mainRole = text;
-  state.step = 'ask_gameId';
-  return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
-}
-if (state && state.step === 'ask_gameId') {
-  state.teammateProfile = state.teammateProfile || {};
-  state.teammateProfile.gameId = text || 'اختیاری/نامشخص';
-  await update(userRef(userId), { teammate_profile: state.teammateProfile });
-  userState[userId] = null;
-  return bot.sendMessage(userId, '✅ اطلاعات شما ذخیره شد! از دکمه پروفایل می‌تونی ببینی.');
-}
+if (state && state.step === 'ask_rank') {
+    state.teammateProfile.rank = text;
+    state.step = 'ask_mainHero';
+    return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
+  }
+  if (state && state.step === 'ask_mainHero') {
+    state.teammateProfile.mainHero = text;
+    state.step = 'ask_mainRole';
+    return bot.sendMessage(userId, '🎯 بیشتر چه رولی پلی می‌دی؟ (مثلا: تانک، ساپورت، مید)');
+  }
+  if (state && state.step === 'ask_mainRole') {
+    state.teammateProfile.mainRole = text;
+    state.step = 'ask_gameId';
+    return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
+  }
+  if (state && state.step === 'ask_gameId') {
+    state.teammateProfile.gameId = text || 'اختیاری/نامشخص';
+    await update(userRef(userId), { teammate_profile: state.teammateProfile });
+    userState[userId] = null;
+    return bot.sendMessage(userId, '✅ اطلاعات شما ذخیره شد! از دکمه پروفایل می‌تونی ببینی.');
+  }
 
     // ذخیره پیام
     const key = match.getChatKey(userId, partnerId);
