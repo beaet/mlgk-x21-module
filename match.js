@@ -1,11 +1,9 @@
-// match.js
 const { ref, update, get } = require('firebase/database');
 
 const teammateQueue = {
   ranked: [],
   classic: []
 };
-// بالای فایل
 const chatPairs = {}; // userId: partnerId
 const chatHistory = {}; // key: `${userA}_${userB}`; value: array of messages
 
@@ -25,27 +23,18 @@ function cleanOldChats(hours = 48) {
   }
 }
 
-module.exports = {
-  // ... سایر خروجی‌ها
-  chatPairs,
-  chatHistory,
-  getChatKey,
-  cleanOldChats,
-};
-
 function getMaxDailyChance(user) {
   return 3 + Math.floor((user.invites || 0) / 5);
 }
+
 async function getUser(db, userId) {
   const snap = await get(ref(db, `users/${userId}`));
   return snap.exists() ? snap.val() : null;
 }
 
 async function addToQueue({ userId, mode, db, bot, userState }) {
-  // اگر کسی تو صف هست که منتظر همین مود باشه
   if (teammateQueue[mode].length > 0) {
     const partnerId = teammateQueue[mode].shift();
-    // هر دو طرف وارد چت ناشناس میشن
     chatPairs[userId] = partnerId;
     chatPairs[partnerId] = userId;
 
@@ -77,7 +66,6 @@ async function addToQueue({ userId, mode, db, bot, userState }) {
     await bot.sendMessage(partnerId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info1}\n\nچت ناشناس فعال شد، پیام بده!`, keyboard);
     return true;
   } else {
-    // وارد صف بشه
     teammateQueue[mode].push(userId);
     await bot.sendMessage(userId, `در حال جستجو برای هم‌تیمی (${mode === 'ranked' ? 'رنک' : 'کلاسیک'})...\nتا پیدا شدن چت کنسل نمی‌شه.\nبرای لغو /cancel را بزنید.`);
     return false;
@@ -98,7 +86,6 @@ function leaveChat(userId, userState, bot, returnChanceForPartner = false, db = 
     if (userState[partnerId]?.step === 'in_anonymous_chat') {
       userState[partnerId] = null;
       bot.sendMessage(partnerId, 'طرف مقابل چت را لغو کرد.');
-      // اگر باید شانس طرف مقابل برگرده
       if (returnChanceForPartner && db) {
         (async () => {
           const partner = await getUser(db, partnerId);
@@ -117,9 +104,13 @@ function isInChat(userId) {
   return !!chatPairs[userId];
 }
 
+// ======= خروجی کامل =======
 module.exports = {
   teammateQueue,
   chatPairs,
+  chatHistory,
+  getChatKey,
+  cleanOldChats,
   getMaxDailyChance,
   addToQueue,
   removeFromQueue,
