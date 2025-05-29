@@ -7,7 +7,6 @@ const teammateQueue = {
 };
 const chatPairs = {}; // userId: partnerId
 // بالای فایل
-const chatPairs = {}; // userId: partnerId
 const chatHistory = {}; // key: `${userA}_${userB}`; value: array of messages
 
 function getChatKey(userA, userB) {
@@ -26,13 +25,7 @@ function cleanOldChats(hours = 48) {
   }
 }
 
-module.exports = {
-  // ... سایر خروجی‌ها
-  chatPairs,
-  chatHistory,
-  getChatKey,
-  cleanOldChats,
-};
+
 
 function getMaxDailyChance(user) {
   // اگر maxDailyChance دستی ست شده بود، همان را برگردان
@@ -123,6 +116,9 @@ function isInChat(userId) {
 module.exports = {
   teammateQueue,
   chatPairs,
+  chatHistory,
+  getChatKey,
+  cleanOldChats,
   getMaxDailyChance,
   addToQueue,
   removeFromQueue,
