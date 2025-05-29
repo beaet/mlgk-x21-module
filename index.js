@@ -476,28 +476,7 @@ if (data === 'find_teammate_profile') {
   return bot.sendMessage(userId, '🏅 رنکت چیه؟ (مثلا: اپیک، لجند، میتیک)');
 }
 
-const state = userState[userId];
-if (state && state.step === 'ask_rank') {
-  state.teammateProfile.rank = text;
-  state.step = 'ask_mainHero';
-  return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
-}
-if (state && state.step === 'ask_mainHero') {
-  state.teammateProfile.mainHero = text;
-  state.step = 'ask_mainRole';
-  return bot.sendMessage(userId, '🎯 بیشتر چه رولی پلی می‌دی؟ (مثلا: تانک، ساپورت، مید)');
-}
-if (state && state.step === 'ask_mainRole') {
-  state.teammateProfile.mainRole = text;
-  state.step = 'ask_gameId';
-  return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
-}
-if (state && state.step === 'ask_gameId') {
-  state.teammateProfile.gameId = text || 'اختیاری/نامشخص';
-  await update(userRef(userId), { teammate_profile: state.teammateProfile });
-  userState[userId] = null;
-  return bot.sendMessage(userId, '✅ اطلاعات شما ذخیره شد! از دکمه پروفایل می‌تونی ببینی.');
-}
+
 
 if (data === 'anon_cancel') {
   match.leaveChat(userId, userState, bot, true, db);
@@ -517,33 +496,7 @@ if (data === 'anon_accept') {
 }
 
 
-if (data === 'profile') {
-  await bot.answerCallbackQuery(query.id);
-  const invitesCount = user.invites || 0;
-  const maxDailyChance = match.getMaxDailyChance(user);
-  const usedChance = user.findChanceUsed || 0;
-  const teammateProfile = user.teammate_profile || {};
-  const rank = teammateProfile.rank || 'نامشخص';
-  const mainHero = teammateProfile.mainHero || 'نامشخص';
-  const mainRole = teammateProfile.mainRole || 'نامشخص';
-  const gameId = teammateProfile.gameId || 'اختیاری/نامشخص';
-  let profileMessage = 
-    `🆔 آیدی عددی: ${userId}\n` +
-    `⭐ امتیاز فعلی: ${user.points}\n` +
-    `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
-    `🎲 شانس روزانه هم‌تیمی: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
-    `🏅 رنک: ${rank}\n` +
-    `🦸‍♂️ هیرو مین: ${mainHero}\n` +
-    `🎯 رول اصلی: ${mainRole}\n` +
-    `🆔/🎮 آیدی عددی/اسم: ${gameId}`;
-  return bot.sendMessage(userId, profileMessage, {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: '✏️ ویرایش اطلاعات بازیکن', callback_data: 'find_teammate_profile' }]
-      ]
-    }
-  });
-}
+
 
 
 
@@ -629,39 +582,7 @@ if (query.data === 'challenge') {
   // تأیید پرداخت ۳ امتیاز برای فعال‌سازی دائمی رندوم پیک
 
 
-if (data === 'anon_report') {
-  const partnerId = userState[userId]?.chatPartner;
-  if (partnerId) {
-    const reportKey = match.getChatKey(userId, partnerId);
-    await bot.sendMessage(adminId,
-      `🚨 گزارش چت ناشناس\nآیدی ۱: ${userId}\nآیدی ۲: ${partnerId}`,
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '👁 مشاهده پیام‌ها', callback_data: `see_chat_${reportKey}` }]
-          ]
-        }
-      }
-    );
-  }
-  await bot.answerCallbackQuery(query.id, { text: 'گزارش شما ثبت شد.', show_alert: true });
-  return;
-}
 
-if (data.startsWith('see_chat_')) {
-  const chatKey = data.replace('see_chat_', '');
-  match.cleanOldChats(48); // پاکسازی پیام‌های قدیمی قبل نمایش
-
-  const history = match.chatHistory[chatKey];
-  if (!history || history.length === 0) {
-    return bot.sendMessage(adminId, '📭 هیچ پیامی در این چت ثبت نشده یا پیام‌ها منقضی شده‌اند.');
-  }
-  let txt = `📃 پیام‌های رد و بدل شده:\n`;
-  history.forEach((msg, idx) => {
-    txt += `\n${idx + 1}. <${msg.from}> ➡️ <${msg.to}>\n${msg.text}\n`;
-  });
-  return bot.sendMessage(adminId, txt);
-}
 
 // نمایش منوی مدیریت دکمه‌ها
 if (data === 'admin_buttons_manage' && userId === adminId) {
@@ -745,6 +666,35 @@ if (data === 'hero_counter') {
   const user = await getUser(userId);
   if (!user) return await bot.answerCallbackQuery(query.id, { text: 'خطا در دریافت اطلاعات کاربر.', show_alert: true });
   if (user?.banned) return await bot.answerCallbackQuery(query.id, { text: 'شما بن شده‌اید و اجازه استفاده ندارید.', show_alert: true });
+
+
+if (data === 'profile') {
+  await bot.answerCallbackQuery(query.id);
+  const invitesCount = user.invites || 0;
+  const maxDailyChance = match.getMaxDailyChance(user);
+  const usedChance = user.findChanceUsed || 0;
+  const teammateProfile = user.teammate_profile || {};
+  const rank = teammateProfile.rank || 'نامشخص';
+  const mainHero = teammateProfile.mainHero || 'نامشخص';
+  const mainRole = teammateProfile.mainRole || 'نامشخص';
+  const gameId = teammateProfile.gameId || 'اختیاری/نامشخص';
+  let profileMessage = 
+    `🆔 آیدی عددی: ${userId}\n` +
+    `⭐ امتیاز فعلی: ${user.points}\n` +
+    `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
+    `🎲 شانس روزانه هم‌تیمی: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
+    `🏅 رنک: ${rank}\n` +
+    `🦸‍♂️ هیرو مین: ${mainHero}\n` +
+    `🎯 رول اصلی: ${mainRole}\n` +
+    `🆔/🎮 آیدی عددی/اسم: ${gameId}`;
+  return bot.sendMessage(userId, profileMessage, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '✏️ ویرایش اطلاعات بازیکن', callback_data: 'find_teammate_profile' }]
+      ]
+    }
+  });
+}
 
   // ---- لیست پیک/بن ----
   if (data === 'pickban_list') {
@@ -1381,6 +1331,40 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
         return bot.sendMessage(userId, `کد ${code} (در صورت وجود) حذف شد.`);
     }
   }
+  
+  if (data === 'anon_report') {
+  const partnerId = userState[userId]?.chatPartner;
+  if (partnerId) {
+    const reportKey = match.getChatKey(userId, partnerId);
+    await bot.sendMessage(adminId,
+      `🚨 گزارش چت ناشناس\nآیدی ۱: ${userId}\nآیدی ۲: ${partnerId}`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '👁 مشاهده پیام‌ها', callback_data: `see_chat_${reportKey}` }]
+          ]
+        }
+      }
+    );
+  }
+  await bot.answerCallbackQuery(query.id, { text: 'گزارش شما ثبت شد.', show_alert: true });
+  return;
+}
+
+if (data.startsWith('see_chat_')) {
+  const chatKey = data.replace('see_chat_', '');
+  match.cleanOldChats(48); // پاکسازی پیام‌های قدیمی قبل نمایش
+
+  const history = match.chatHistory[chatKey];
+  if (!history || history.length === 0) {
+    return bot.sendMessage(adminId, '📭 هیچ پیامی در این چت ثبت نشده یا پیام‌ها منقضی شده‌اند.');
+  }
+  let txt = `📃 پیام‌های رد و بدل شده:\n`;
+  history.forEach((msg, idx) => {
+    txt += `\n${idx + 1}. <${msg.from}> ➡️ <${msg.to}>\n${msg.text}\n`;
+  });
+  return bot.sendMessage(adminId, txt);
+}
 
   // ---- User steps for calculations ----
   if (state.step === 'total') {
@@ -1455,6 +1439,29 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
     userState[userId] = null;
     return bot.sendMessage(userId, 'کد نامعتبر است یا منقضی شده است.');
   }
+
+
+if (state && state.step === 'ask_rank') {
+  state.teammateProfile.rank = text;
+  state.step = 'ask_mainHero';
+  return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
+}
+if (state && state.step === 'ask_mainHero') {
+  state.teammateProfile.mainHero = text;
+  state.step = 'ask_mainRole';
+  return bot.sendMessage(userId, '🎯 بیشتر چه رولی پلی می‌دی؟ (مثلا: تانک، ساپورت، مید)');
+}
+if (state && state.step === 'ask_mainRole') {
+  state.teammateProfile.mainRole = text;
+  state.step = 'ask_gameId';
+  return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
+}
+if (state && state.step === 'ask_gameId') {
+  state.teammateProfile.gameId = text || 'اختیاری/نامشخص';
+  await update(userRef(userId), { teammate_profile: state.teammateProfile });
+  userState[userId] = null;
+  return bot.sendMessage(userId, '✅ اطلاعات شما ذخیره شد! از دکمه پروفایل می‌تونی ببینی.');
+}
 
   // ---- اداره مراحل ثبت اسکواد ----
   if (state.step === 'squad_name') {
