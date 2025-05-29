@@ -3,7 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
-const lastAction = {};
+
 const app = express();
 const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
@@ -392,7 +392,7 @@ bot.on('callback_query', async (query) => {
   const data = query.data;
   const chat_id = query.message.chat.id;
   const message_id = query.message.message_id; // این خط درست و کافی است
-  const messageId = query.message.message_id;
+
   const blockedBtn = MENU_BUTTONS.find(btn => btn.key === data);
   if (blockedBtn && !(await isButtonEnabled(data)) && userId !== adminId) {
     return bot.answerCallbackQuery(query.id, { text: '⏰این بخش موقتا از دسترس خارج شده', show_alert: true });
@@ -418,28 +418,11 @@ bot.on('callback_query', async (query) => {
     });
   }
   
-  if (userId !== adminId) {
-    if (lastAction[userId] && now - lastAction[userId] < 1000) {
-      return bot.answerCallbackQuery(query.id, { text: "⏳ خیلی سریع کلیک کردی، کمی صبر کن!", show_alert: true });
-    }
- 
-  
-  if (userId !== adminId && userBusy[userId]) {
-    return bot.answerCallbackQuery(query.id, { text: "⏳ هنوز عملیات قبلی تمام نشده!", show_alert: true });
-  }
-  if (userId !== adminId) userBusy[userId] = true;
-
-  try {
-    // ... عملیات اصلی
-  } finally {
-    if (userId !== adminId) userBusy[userId] = false;
-  }
-  
   if (data === 'ml_news') {
   const cooldownRef = ref(db, `cooldowns/news/${userId}`);
   const cooldownSnap = await get(cooldownRef);
   const now = Date.now();
-lastAction[userId] = now;
+
   if (cooldownSnap.exists()) {
     const lastUsed = cooldownSnap.val();
     const secondsPassed = Math.floor((now - lastUsed) / 1000);
@@ -478,7 +461,6 @@ if (data === 'activate_bot' && userId === adminId) {
 // بررسی بن عمومی قبل از هر کلیک
 const banSnap = await get(ref(db, `global_ban/${userId}`));
 const now = Date.now();
-lastAction[userId] = now;
 if (banSnap.exists() && banSnap.val().until > now) {
   await bot.answerCallbackQuery(query.id, {
     text: '⛔ شما به دلیل اسپم، تا 10 دقیقه نمی‌توانید از ربات استفاده کنید.',
