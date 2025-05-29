@@ -398,7 +398,7 @@ if (blockedBtn && !(await isButtonEnabled(data)) && userId !== adminId) {
   const validPickRoles = ['pick_XP', 'pick_Gold', 'pick_Mid', 'pick_Roamer', 'pick_Jungle'];
   const currentText = query.message.text;
   const currentMarkup = query.message.reply_markup || null;
-
+const chat_id = query.message.chat.id;
   // فرض بر این که می‌خواهی منوی اصلی را نمایش بدهی
   if (data === 'tools_menu') {
     return bot.editMessageText('🕹 ابزارهای بازی رو انتخاب کن:', {
