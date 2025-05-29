@@ -1187,8 +1187,9 @@ bot.on('callback_query', async (query) => {
       errorMsg = "❗️ تعداد درخواست‌ها زیاد شد. لطفاً کمی صبر کن.";
     }
     await bot.answerCallbackQuery(query.id, { text: errorMsg, show_alert: true });
+  } finally {
+    if (userId !== adminId) userBusy[userId] = false;
   }
-});
 
 // ---- اداره مراحل ثبت اسکواد ----
 // ... ناحیه message handler بدون تغییر، فقط بخش stateهای جدید اضافه شود
