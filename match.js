@@ -25,6 +25,16 @@ function cleanOldChats(hours = 48) {
   }
 }
 
+function profileToString(profile) {
+  if (!profile) return 'بدون اطلاعات';
+  return [
+    `🏅 رنک: ${profile.rank || 'نامشخص'}`,
+    `🦸‍♂️ هیرو مین: ${profile.mainHero || 'نامشخص'}`,
+    `🎯 رول: ${profile.mainRole || 'نامشخص'}`,
+    `🆔 آیدی/اسم: ${profile.gameId || 'نامشخص'}`
+  ].join('\n');
+}
+
 
 
 function getMaxDailyChance(user) {
@@ -55,8 +65,8 @@ async function addToQueue({ userId, mode, db, bot, userState }) {
     await update(ref(db, `users/${partnerId}`), { findChanceUsed: (partner.findChanceUsed || 0) + 1 });
 
     // اطلاعات پروفایل برای نمایش به طرف مقابل
-    const info1 = user.teammate_profile?.desc || 'بدون اطلاعات';
-    const info2 = partner.teammate_profile?.desc || 'بدون اطلاعات';
+    const info1 = profileToString(user.teammate_profile);
+const info2 = profileToString(partner.teammate_profile);
 
     // پیام و دکمه
     const keyboard = {
@@ -70,7 +80,7 @@ async function addToQueue({ userId, mode, db, bot, userState }) {
     };
 
     await bot.sendMessage(userId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info2}\n\nچت ناشناس فعال شد، پیام بده!`, keyboard);
-    await bot.sendMessage(partnerId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info1}\n\nچت ناشناس فعال شد، پیام بده!`, keyboard);
+await bot.sendMessage(partnerId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info1}\n\nچت ناشناس فعال شد، پیام بده!`, keyboard);
     return true;
   } else {
     // وارد صف بشه
