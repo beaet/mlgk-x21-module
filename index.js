@@ -794,6 +794,40 @@ if (data === 'profile') {
     return;
   }
   
+    if (data === 'anon_report') {
+  const partnerId = userState[userId]?.chatPartner;
+  if (partnerId) {
+    const reportKey = match.getChatKey(userId, partnerId);
+    await bot.sendMessage(adminId,
+      `🚨 گزارش چت ناشناس\nآیدی ۱: ${userId}\nآیدی ۲: ${partnerId}`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '👁 مشاهده پیام‌ها', callback_data: `see_chat_${reportKey}` }]
+          ]
+        }
+      }
+    );
+  }
+  await bot.answerCallbackQuery(query.id, { text: 'گزارش شما ثبت شد.', show_alert: true });
+  return;
+}
+
+if (data.startsWith('see_chat_')) {
+  const chatKey = data.replace('see_chat_', '');
+  match.cleanOldChats(48); // پاکسازی پیام‌های قدیمی قبل نمایش
+
+  const history = match.chatHistory[chatKey];
+  if (!history || history.length === 0) {
+    return bot.sendMessage(adminId, '📭 هیچ پیامی در این چت ثبت نشده یا پیام‌ها منقضی شده‌اند.');
+  }
+  let txt = `📃 پیام‌های رد و بدل شده:\n`;
+  history.forEach((msg, idx) => {
+    txt += `\n${idx + 1}. <${msg.from}> ➡️ <${msg.to}>\n${msg.text}\n`;
+  });
+  return bot.sendMessage(adminId, txt);
+}
+  
   if (data === 'user_details' && userId === adminId) {
   await bot.answerCallbackQuery(query.id);
   // گرفتن همه کاربران
@@ -1332,39 +1366,7 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
     }
   }
   
-  if (data === 'anon_report') {
-  const partnerId = userState[userId]?.chatPartner;
-  if (partnerId) {
-    const reportKey = match.getChatKey(userId, partnerId);
-    await bot.sendMessage(adminId,
-      `🚨 گزارش چت ناشناس\nآیدی ۱: ${userId}\nآیدی ۲: ${partnerId}`,
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '👁 مشاهده پیام‌ها', callback_data: `see_chat_${reportKey}` }]
-          ]
-        }
-      }
-    );
-  }
-  await bot.answerCallbackQuery(query.id, { text: 'گزارش شما ثبت شد.', show_alert: true });
-  return;
-}
 
-if (data.startsWith('see_chat_')) {
-  const chatKey = data.replace('see_chat_', '');
-  match.cleanOldChats(48); // پاکسازی پیام‌های قدیمی قبل نمایش
-
-  const history = match.chatHistory[chatKey];
-  if (!history || history.length === 0) {
-    return bot.sendMessage(adminId, '📭 هیچ پیامی در این چت ثبت نشده یا پیام‌ها منقضی شده‌اند.');
-  }
-  let txt = `📃 پیام‌های رد و بدل شده:\n`;
-  history.forEach((msg, idx) => {
-    txt += `\n${idx + 1}. <${msg.from}> ➡️ <${msg.to}>\n${msg.text}\n`;
-  });
-  return bot.sendMessage(adminId, txt);
-}
 
   // ---- User steps for calculations ----
   if (state.step === 'total') {
@@ -1440,6 +1442,11 @@ if (data.startsWith('see_chat_')) {
     return bot.sendMessage(userId, 'کد نامعتبر است یا منقضی شده است.');
   }
 
+if (data === 'find_teammate_profile') {
+  userState[userId] = { step: 'ask_rank', teammateProfile: {} };
+  await bot.answerCallbackQuery(query.id);
+  return bot.sendMessage(userId, '🏅 رنکت چیه؟ (مثلا: اپیک، لجند، میتیک)');
+}
 
 if (state && state.step === 'ask_rank') {
   state.teammateProfile.rank = text;
