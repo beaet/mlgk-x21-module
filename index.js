@@ -715,7 +715,7 @@ if (data === 'hero_counter') {
   // ---- Main menu back ----
   if (data === 'main_menu') {
     await bot.answerCallbackQuery(query.id);
-    sendMainMenu(userId, messaged);
+    sendMainMenu(userId, messageId);
     return;
   }
 
