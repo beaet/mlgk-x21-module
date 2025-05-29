@@ -1230,22 +1230,27 @@ if (userId === adminId && state && state.step === 'edit_chance_enter_value') {
   return bot.sendMessage(userId, `شانس روزانه کاربر ${state.targetUserId} به ${val}/${val} تنظیم شد و مقدار استفاده ریست شد.`);
 }
     
-    if (state && state.step === 'ask_rank') {
+// در message handler:
+if (state && state.step === 'ask_rank') {
+  state.teammateProfile = state.teammateProfile || {};
   state.teammateProfile.rank = text;
   state.step = 'ask_mainHero';
   return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
 }
 if (state && state.step === 'ask_mainHero') {
+  state.teammateProfile = state.teammateProfile || {};
   state.teammateProfile.mainHero = text;
   state.step = 'ask_mainRole';
   return bot.sendMessage(userId, '🎯 بیشتر چه رولی پلی می‌دی؟ (مثلا: تانک، ساپورت، مید)');
 }
 if (state && state.step === 'ask_mainRole') {
+  state.teammateProfile = state.teammateProfile || {};
   state.teammateProfile.mainRole = text;
   state.step = 'ask_gameId';
   return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
 }
 if (state && state.step === 'ask_gameId') {
+  state.teammateProfile = state.teammateProfile || {};
   state.teammateProfile.gameId = text || 'اختیاری/نامشخص';
   await update(userRef(userId), { teammate_profile: state.teammateProfile });
   userState[userId] = null;
@@ -1277,13 +1282,6 @@ if (state && state.step === 'ask_gameId') {
       return bot.sendMessage(adminId, '✅ پیام شما به کاربر ارسال شد.');
     }
   }
-  
-  if (state && state.step === 'find_teammate_profile') {
-  state.info = { desc: text };
-  await update(userRef(userId), { teammate_profile: state.info });
-  userState[userId] = null;
-  return bot.sendMessage(userId, 'اطلاعات شما ذخیره شد! دوباره دکمه پیدا کردن هم‌تیمی را بزنید.');
-}
 
 if (state && state.step === 'in_anonymous_chat' && state.chatPartner) {
   const partnerId = state.chatPartner;
