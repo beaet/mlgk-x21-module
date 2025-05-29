@@ -6,6 +6,33 @@ const teammateQueue = {
   classic: []
 };
 const chatPairs = {}; // userId: partnerId
+// بالای فایل
+const chatPairs = {}; // userId: partnerId
+const chatHistory = {}; // key: `${userA}_${userB}`; value: array of messages
+
+function getChatKey(userA, userB) {
+  return [userA, userB].sort().join('_');
+}
+
+// پاکسازی پیام‌های بالای ۲ روز (۴۸ ساعت)
+function cleanOldChats(hours = 48) {
+  const now = Date.now();
+  const expireMs = hours * 60 * 60 * 1000;
+  for (const key in chatHistory) {
+    chatHistory[key] = chatHistory[key].filter(msg =>
+      now - new Date(msg.date).getTime() < expireMs
+    );
+    if (chatHistory[key].length === 0) delete chatHistory[key];
+  }
+}
+
+module.exports = {
+  // ... سایر خروجی‌ها
+  chatPairs,
+  chatHistory,
+  getChatKey,
+  cleanOldChats,
+};
 
 function getMaxDailyChance(user) {
   return 3 + Math.floor((user.invites || 0) / 5);
