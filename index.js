@@ -391,6 +391,7 @@ bot.on('callback_query', async (query) => {
   const userId = query.from.id;
   const data = query.data;
   const chat_id = query.message.chat.id;
+  const messageId = query.message.message_id;
   const message_id = query.message.message_id; // این خط درست و کافی است
 
   const blockedBtn = MENU_BUTTONS.find(btn => btn.key === data);
