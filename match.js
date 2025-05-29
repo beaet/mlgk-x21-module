@@ -5,7 +5,6 @@ const teammateQueue = {
   ranked: [],
   classic: []
 };
-const chatPairs = {}; // userId: partnerId
 // بالای فایل
 const chatPairs = {}; // userId: partnerId
 const chatHistory = {}; // key: `${userA}_${userB}`; value: array of messages
