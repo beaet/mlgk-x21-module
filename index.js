@@ -390,7 +390,7 @@ bot.on('callback_query', async (query) => {
     await bot.answerCallbackQuery(query.id, { text: '⏳ربات موقتاً خاموش است.', show_alert: true });
     return;
   }
-
+const now = Date.now();
   const userId = query.from.id;
   const data = query.data;
   const chat_id = query.message.chat.id;
@@ -444,7 +444,6 @@ bot.on('callback_query', async (query) => {
   if (data === 'ml_news') {
   const cooldownRef = ref(db, `cooldowns/news/${userId}`);
   const cooldownSnap = await get(cooldownRef);
-  const now = Date.now();
 
   if (cooldownSnap.exists()) {
     const lastUsed = cooldownSnap.val();
@@ -483,7 +482,6 @@ if (data === 'activate_bot' && userId === adminId) {
 
 // بررسی بن عمومی قبل از هر کلیک
 const banSnap = await get(ref(db, `global_ban/${userId}`));
-const now = Date.now();
 if (banSnap.exists() && banSnap.val().until > now) {
   await bot.answerCallbackQuery(query.id, {
     text: '⛔ شما به دلیل اسپم، تا 10 دقیقه نمی‌توانید از ربات استفاده کنید.',
