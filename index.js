@@ -3,7 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
-
+const lastAction = {};
 const app = express();
 const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
