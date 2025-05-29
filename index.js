@@ -390,7 +390,9 @@ bot.on('callback_query', async (query) => {
 
   const userId = query.from.id;
   const data = query.data;
-  const messageId = query.message && query.message.message_id;
+  const chat_id = query.message.chat.id;
+message.message_id;
+  const messageId = query.message && query.
   const blockedBtn = MENU_BUTTONS.find(btn => btn.key === data);
 if (blockedBtn && !(await isButtonEnabled(data)) && userId !== adminId) {
   return bot.answerCallbackQuery(query.id, { text: '⏰این بخش موقتا از دسترس خارج شده', show_alert: true });
@@ -398,7 +400,6 @@ if (blockedBtn && !(await isButtonEnabled(data)) && userId !== adminId) {
   const validPickRoles = ['pick_XP', 'pick_Gold', 'pick_Mid', 'pick_Roamer', 'pick_Jungle'];
   const currentText = query.message.text;
   const currentMarkup = query.message.reply_markup || null;
-const chat_id = query.message.chat.id;
   // فرض بر این که می‌خواهی منوی اصلی را نمایش بدهی
   if (data === 'tools_menu') {
     return bot.editMessageText('🕹 ابزارهای بازی رو انتخاب کن:', {
