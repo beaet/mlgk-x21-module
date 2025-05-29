@@ -384,17 +384,18 @@ bot.onText(/\/panel/, async (msg) => {
 // ---- CALLBACK QUERIES ----
 bot.on('callback_query', async (query) => {
   try {
-    if (!botActive && query.from.id !== adminId) {
-      await bot.answerCallbackQuery(query.id, { text: '⏳ربات موقتاً خاموش است.', show_alert: true });
-      return;
-    }
-
-    const userId = query.from.id;
+  const userId = query.from.id;
     const data = query.data;
     const chat_id = query.message.chat.id;
     const message_id = query.message.message_id;
 
     const blockedBtn = MENU_BUTTONS.find(btn => btn.key === data);
+  
+    if (!botActive && query.from.id !== adminId) {
+      await bot.answerCallbackQuery(query.id, { text: '⏳ربات موقتاً خاموش است.', show_alert: true });
+      return;
+    }
+
     if (blockedBtn && !(await isButtonEnabled(data)) && userId !== adminId) {
       return bot.answerCallbackQuery(query.id, { text: '⏰این بخش موقتا از دسترس خارج شده', show_alert: true });
     }
