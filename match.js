@@ -26,7 +26,7 @@ function cleanOldChats(hours = 48) {
 }
 
 function profileToString(profile) {
-  if (!profile) return 'بدون اطلاعات';
+  if (!profile) return '👤بدون اطلاعات';
   return [
     `🏅 رنک: ${profile.rank || 'نامشخص'}`,
     `🦸‍♂️ هیرو مین: ${profile.mainHero || 'نامشخص'}`,
@@ -54,7 +54,8 @@ async function addToQueue({ userId, mode, db, bot, userState }) {
     // هر دو طرف وارد چت ناشناس میشن
     chatPairs[userId] = partnerId;
     chatPairs[partnerId] = userId;
-
+userState[userId].anon_canceled = false;
+  userState[partnerId].anon_canceled = false;
     userState[userId] = { step: 'in_anonymous_chat', chatPartner: partnerId, mode };
     userState[partnerId] = { step: 'in_anonymous_chat', chatPartner: userId, mode };
 
@@ -72,8 +73,8 @@ const info2 = profileToString(partner.teammate_profile);
     const keyboard = {
       reply_markup: {
         inline_keyboard: [
-          [{ text: '❌ لغو چت', callback_data: 'anon_cancel' }],
-          [{ text: '✅ موافقت و خروج', callback_data: 'anon_accept' }],
+          [{ text: '❌ پایان و لغو چت', callback_data: 'anon_cancel' }],
+          [{ text: '✅ رضایت و خروج', callback_data: 'anon_accept' }],
           [{ text: '🚨 گزارش کاربر', callback_data: 'anon_report' }]
         ]
       }
@@ -85,7 +86,7 @@ await bot.sendMessage(partnerId, `✅ یک هم‌تیمی برای شما پی�
   } else {
     // وارد صف بشه
     teammateQueue[mode].push(userId);
-    await bot.sendMessage(userId, `در حال جستجو برای هم‌تیمی (${mode === 'ranked' ? 'رنک' : 'کلاسیک'})...\nتا پیدا شدن چت کنسل نمی‌شه.\nبرای لغو /cancel را بزنید.`);
+    await bot.sendMessage(userId, `🔎در حال جستجو برای هم‌تیمی (${mode === 'ranked' ? 'رنک' : 'کلاسیک'})...\nتا پیدا شدن چت کنسل نمی‌شه.\nبرای لغو /cancel را بزنید.`);
     return false;
   }
 }
@@ -103,14 +104,14 @@ function leaveChat(userId, userState, bot, returnChanceForPartner = false, db = 
     delete chatPairs[partnerId];
     if (userState[partnerId]?.step === 'in_anonymous_chat') {
       userState[partnerId] = null;
-      bot.sendMessage(partnerId, 'طرف مقابل چت را لغو کرد.');
+      bot.sendMessage(partnerId, 'طرف مقابل چت را لغو کرد!');
       // اگر باید شانس طرف مقابل برگرده
       if (returnChanceForPartner && db) {
         (async () => {
           const partner = await getUser(db, partnerId);
           if (partner) {
             await update(ref(db, `users/${partnerId}`), { findChanceUsed: Math.max((partner.findChanceUsed || 1) - 1, 0) });
-            bot.sendMessage(partnerId, 'شانس روزانه شما برگشت.');
+            bot.sendMessage(partnerId, '🎟️شانس روزانه شما برگشت.');
           }
         })();
       }
