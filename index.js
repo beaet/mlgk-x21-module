@@ -422,8 +422,7 @@ bot.on('callback_query', async (query) => {
     if (lastAction[userId] && now - lastAction[userId] < 1000) {
       return bot.answerCallbackQuery(query.id, { text: "⏳ خیلی سریع کلیک کردی، کمی صبر کن!", show_alert: true });
     }
-    lastAction[userId] = now;
-  }
+ 
   
   if (userId !== adminId && userBusy[userId]) {
     return bot.answerCallbackQuery(query.id, { text: "⏳ هنوز عملیات قبلی تمام نشده!", show_alert: true });
@@ -439,8 +438,6 @@ bot.on('callback_query', async (query) => {
   if (data === 'ml_news') {
   const cooldownRef = ref(db, `cooldowns/news/${userId}`);
   const cooldownSnap = await get(cooldownRef);
-  const now = Date.now();
-lastAction[userId] = now;
   if (cooldownSnap.exists()) {
     const lastUsed = cooldownSnap.val();
     const secondsPassed = Math.floor((now - lastUsed) / 1000);
@@ -479,6 +476,7 @@ if (data === 'activate_bot' && userId === adminId) {
 // بررسی بن عمومی قبل از هر کلیک
 const banSnap = await get(ref(db, `global_ban/${userId}`));
 const now = Date.now();
+lastAction[userId] = now;
 if (banSnap.exists() && banSnap.val().until > now) {
   await bot.answerCallbackQuery(query.id, {
     text: '⛔ شما به دلیل اسپم، تا 10 دقیقه نمی‌توانید از ربات استفاده کنید.',
