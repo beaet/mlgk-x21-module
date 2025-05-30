@@ -4,6 +4,7 @@ const express = require('express');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
 const userBusy = {};
+console.log('✅ Bot started - latest version loaded');
 const userCooldown = {};
 const app = express();
 const spamTracker = {};
