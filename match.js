@@ -73,14 +73,14 @@ const info2 = profileToString(partner.teammate_profile);
     const keyboard = {
       reply_markup: {
         inline_keyboard: [
-          [{ text: '❌ پایان و لغو چت', callback_data: 'anon_cancel' }],
-          [{ text: '✅ رضایت و خروج', callback_data: 'anon_accept' }],
-          [{ text: '🚨 گزارش کاربر', callback_data: 'anon_report' }]
+          [{ text: '🔙 رضایت و خروج', callback_data: 'anon_cancel' }],
+          [{ text: '⛔ بلاک کردن کاربر', callback_data: 'anon_accept' }],
+          [{ text: '🚨 گزارش کاربر', callback_data: 'anon_block' }]
         ]
       }
     };
 
-    await bot.sendMessage(userId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info2}\n\nچت ناشناس فعال شد، پیام بده!`, keyboard);
+    await bot.sendMessage(userId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info2}\n\nچت ناشناس  از همین الان فعال شد، پیام بده!`, keyboard);
 await bot.sendMessage(partnerId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info1}\n\nچت ناشناس فعال شد، پیام بده!`, keyboard);
     return true;
   } else {
