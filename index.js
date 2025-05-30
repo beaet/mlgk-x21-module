@@ -7,6 +7,7 @@ const userBusy = {};
 const userCooldown = {};
 const app = express();
 const spamTracker = {};
+const startCooldown = new Map();
 const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
 const match = require('./match');
@@ -281,7 +282,15 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   const userId = msg.from.id;
   delete userState[userId];
   delete userBusy[userId];
+  const now = Date.now();
   const refId = match[1] ? parseInt(match[1]) : null;
+  
+   // بررسی ضداسپم: فقط یکبار در 3 ثانیه اجازه می‌ده
+  if (startCooldown.has(userId) && now - startCooldown.get(userId) < 3000) {
+    return; // هیچ واکنشی نده
+  }
+
+  startCooldown.set(userId, now); // زمان جدید ذخیره کن
   
   if (!botActive && msg.from.id !== adminId) {
     return bot.sendMessage(msg.from.id, "ربات موقتاً خاموش است.");
