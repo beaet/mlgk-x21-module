@@ -297,8 +297,8 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   // ریست وضعیت‌های موقت (state) بدون حذف اطلاعات اصلی کاربر
   delete userState[userId];
   delete userBusy[userId];
-
-  await remove(ref(db, `states/${userId}`));
+  
+  
 
   // بررسی ثبت کاربر و دریافت اطلاعات
   await ensureUser(msg.from);
@@ -480,6 +480,30 @@ const now = Date.now();
     });
   }
   
+  if (data === 'blocked_users_list') {
+  const list = blockedUsers[userId] || [];
+  if (list.length === 0) {
+    await bot.answerCallbackQuery(query.id);
+    return bot.sendMessage(userId, 'هیچ کاربری در لیست بلاکی‌های شما وجود ندارد (لیست بلاکی ها موقتی است)');
+  }
+  // نمایش لیست و دکمه آنبلاک
+  const keyboard = list.map(uid => [
+    { text: `آن‌بلاک کاربر ${uid}`, callback_data: `unblock_${uid}` }
+  ]);
+  await bot.answerCallbackQuery(query.id);
+  return bot.sendMessage(userId, 'لیست کاربران بلاک شده:', {
+    reply_markup: { inline_keyboard: keyboard }
+  });
+}
+
+// هندل آنبلاک کردن
+if (data.startsWith('unblock_')) {
+  const unblockId = data.replace('unblock_', '');
+  blockedUsers[userId] = (blockedUsers[userId] || []).filter(uid => uid != unblockId);
+  await bot.answerCallbackQuery(query.id, { text: 'کاربر آنبلاک شد.', show_alert: true });
+  return bot.sendMessage(userId, `کاربر ${unblockId} از لیست بلاک خارج شد.`);
+}
+  
   if (data === 'ml_news') {
   const cooldownRef = ref(db, `cooldowns/news/${userId}`);
   const cooldownSnap = await get(cooldownRef);
@@ -542,12 +566,13 @@ if (data === 'find_teammate') {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '🏆رنک', callback_data: 'find_teammate_ranked' },
-          { text: '🏝️کلاسیک', callback_data: 'find_teammate_classic' }
-        ],
-        [{ text: '🧭اطلاعات من', callback_data: 'find_teammate_profile' }],
-        [{ text: '🔙بازگشت', callback_data: 'main_menu' }]
-      ]
+      { text: '🏆رنک', callback_data: 'find_teammate_ranked' },
+      { text: '🏝️کلاسیک', callback_data: 'find_teammate_classic' }
+    ],
+    [{ text: '🧭ثبت اطلاعات من', callback_data: 'find_teammate_profile' }],
+    [{ text: '📋 لیست بلاکی‌ها', callback_data: 'blocked_users_list' }],
+    [{ text: '🔙بازگشت', callback_data: 'main_menu' }]
+  ]
     }
   });
 }
@@ -581,15 +606,20 @@ if (data === 'anon_cancel') {
   }
   return;
 }
-if (data === 'anon_accept') {
+if (data === 'anon_block') {
   const partnerId = userState[userId]?.chatPartner;
-  if (partnerId && userState[partnerId] && userState[partnerId].step === 'in_anonymous_chat') {
+  if (partnerId) {
+    // اضافه کردن partnerId به لیست بلاک‌شده‌های این کاربر
+    if (!blockedUsers[userId]) blockedUsers[userId] = [];
+    if (!blockedUsers[userId].includes(partnerId)) blockedUsers[userId].push(partnerId);
+
+    // پایان چت و اطلاع‌رسانی
     userState[userId] = null;
     userState[partnerId] = null;
-    await bot.sendMessage(partnerId, '✅هم‌تیمی شما چت را با موفقیت و رضایت به پایان رساند. موفق باشید!');
-    await bot.sendMessage(userId, '✅چت با موفقیت پایان یافت ربات را /start کنید.');
+    await bot.sendMessage(partnerId, '⛔ شما توسط هم‌تیمی بلاک شدید و چت پایان یافت.');
+    await bot.sendMessage(userId, '✅ کاربر مقابل بلاک شد و چت پایان یافت. برای شروع دوباره /start کنید.');
   }
-  await bot.answerCallbackQuery(query.id, { text: '✅چت پایان یافت ربات را /start کنید.' });
+  await bot.answerCallbackQuery(query.id, { text: 'کاربر بلاک شد و چت پایان یافت.', show_alert: true });
   return;
 }
 
