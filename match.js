@@ -49,33 +49,39 @@ async function getUser(db, userId) {
 
 // ------------ ویرایش اصلی اینجاست: addToQueue ---------------
 async function addToQueue({ userId, mode, db, bot, userState }) {
-  while (teammateQueue[mode].length > 0) {
-    const partnerId = teammateQueue[mode].shift();
+  // حلقه تا زمانی که کسی در صف باشد
+  for (let i = 0; i < teammateQueue[mode].length; i++) {
+    const partnerId = teammateQueue[mode][i];
 
-    // ------ جلوگیری از جفت شدن کاربران بلاک‌شده ------
+    // اگر رابطه بلاک بین این دو نفر وجود دارد
     if (
       (blockedUsers[userId] && blockedUsers[userId].includes(partnerId)) ||
       (blockedUsers[partnerId] && blockedUsers[partnerId].includes(userId))
     ) {
-      // این دو نباید جفت بشن، برو سراغ بعدی
-      continue;
+      continue; // این دو نفر نباید مچ بشن، برو سراغ بعدی
     }
-    // -----------------------------------------------
-chatPairs[userId] = partnerId;
-chatPairs[partnerId] = userId;
-userState[partnerId] = { step: 'in_anonymous_chat', chatPartner: userId, mode };
-    // هر دو طرف وارد چت ناشناس میشن
-    // شانس روزانه کم کن
+
+    // اگر به اینجا رسید یعنی جفت مناسبه
+    // حالا partnerId رو از صف بردار (با splice)
+    teammateQueue[mode].splice(i, 1);
+
+    // بقیه کد جفت کردن مثل قبل:
+    chatPairs[userId] = partnerId;
+    chatPairs[partnerId] = userId;
+    userState[userId].anon_canceled = false;
+    userState[partnerId].anon_canceled = false;
+    userState[userId] = { step: 'in_anonymous_chat', chatPartner: partnerId, mode };
+    userState[partnerId] = { step: 'in_anonymous_chat', chatPartner: userId, mode };
+
+    // شانس روزانه کم کن (و بقیه...)
     const user = await getUser(db, userId);
     const partner = await getUser(db, partnerId);
     await update(ref(db, `users/${userId}`), { findChanceUsed: (user.findChanceUsed || 0) + 1 });
     await update(ref(db, `users/${partnerId}`), { findChanceUsed: (partner.findChanceUsed || 0) + 1 });
 
-    // اطلاعات پروفایل برای نمایش به طرف مقابل
     const info1 = profileToString(user.teammate_profile);
     const info2 = profileToString(partner.teammate_profile);
 
-    // پیام و دکمه
     const keyboard = {
       reply_markup: {
         inline_keyboard: [
@@ -91,7 +97,7 @@ userState[partnerId] = { step: 'in_anonymous_chat', chatPartner: userId, mode };
     return true;
   }
 
-  // اگر کسی پیدا نشد، وارد صف بشه
+  // اگر هیچ کسی مناسب نبود، کاربر فعلی بره تو صف
   teammateQueue[mode].push(userId);
   await bot.sendMessage(userId, `🔎در حال جستجو برای هم‌تیمی (${mode === 'ranked' ? 'رنک' : 'کلاسیک'})...\nتا پیدا شدن چت کنسل نمی‌شه.\nبرای لغو /cancel را بزنید.`);
   return false;
