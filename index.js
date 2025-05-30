@@ -17,7 +17,7 @@ const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = requ
 const token = process.env.BOT_TOKEN;
 const adminId = Number(process.env.ADMIN_ID);
 const webhookUrl = process.env.WEBHOOK_URL;
-const port = process.env.PORT || 10000;
+const port = process.env.PORT || 8080;
 let botActive = true
 const MENU_BUTTONS = [
   { key: 'calculate_rate', label: '📊محاسبه ریت' },
@@ -193,13 +193,18 @@ const supportChatMap = {};
   // اینجا بقیه کدهای bot و express را بنویس
   // مثلاً:
   const bot = new TelegramBot(token, { polling: false });
-  bot.setWebHook(`${webhookUrl}/bot${token}`);
+app.use(express.json());
 
-  app.use(express.json());
-  app.post(`/bot${token}`, (req, res) => {
-    bot.processUpdate(req.body);
+app.post(`/bot${token}`, async (req, res) => {
+  try {
+    await bot.processUpdate(req.body);
     res.sendStatus(200);
-  });
+  } catch (error) {
+    console.error('Error processing update:', error);
+    res.sendStatus(500);
+  }
+});
+
 // ---- Main Menu ----
 function mainMenuKeyboard() {
   return {
@@ -1757,6 +1762,10 @@ let txt = `🎯 اسکواد: ${req.squad_name}\n🎭نقش مورد نیاز: $
     }
   });
 }
+
+app.get('/', (req, res) => {
+  res.send('ربات فعال است');
+});
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
