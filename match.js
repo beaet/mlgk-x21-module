@@ -61,13 +61,10 @@ async function addToQueue({ userId, mode, db, bot, userState }) {
       continue;
     }
     // -----------------------------------------------
-
+chatPairs[userId] = partnerId;
+chatPairs[partnerId] = userId;
+userState[partnerId] = { step: 'in_anonymous_chat', chatPartner: userId, mode };
     // هر دو طرف وارد چت ناشناس میشن
-    chatPairs[userId] = partnerId;
-    chatPairs[partnerId] = userId;
-: partnerId, mode };
-    userState[partnerId] = { step: 'in_anonymous_chat', chatPartner: userId, mode };
-
     // شانس روزانه کم کن
     const user = await getUser(db, userId);
     const partner = await getUser(db, partnerId);
