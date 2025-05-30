@@ -430,7 +430,7 @@ const now = Date.now();
     }
 
     // اعمال بن موقت
-    if (spamTracker[userId].count >= 3) {
+    if (spamTracker[userId].count >= 5) {
       spamTracker[userId].isBanned = true;
       spamTracker[userId].isBannedUntil = now + 60000; // 60 ثانیه بن
       return bot.answerCallbackQuery(query.id, {
