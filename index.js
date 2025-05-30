@@ -300,6 +300,7 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   delete userBusy[userId];
   
   await remove(ref(db, `states/${userId}`));
+
   // بررسی ثبت کاربر و دریافت اطلاعات
   await ensureUser(msg.from);
   const user = await getUser(userId);
@@ -1756,6 +1757,10 @@ let txt = `🎯 اسکواد: ${req.squad_name}\n🎭نقش مورد نیاز: $
     }
   });
 }
+
+app.get("/health", (req, res) => {
+  res.send("OK");
+});
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
