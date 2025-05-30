@@ -74,8 +74,8 @@ const info2 = profileToString(partner.teammate_profile);
       reply_markup: {
         inline_keyboard: [
           [{ text: '🔙 رضایت و خروج', callback_data: 'anon_cancel' }],
-          [{ text: '⛔ بلاک کردن کاربر', callback_data: 'anon_accept' }],
-          [{ text: '🚨 گزارش کاربر', callback_data: 'anon_block' }]
+          [{ text: '⛔ بلاک کردن کاربر', callback_data: 'anon_block' }],
+          [{ text: '🚨 گزارش کاربر', callback_data: 'anon_report' }]
         ]
       }
     };
