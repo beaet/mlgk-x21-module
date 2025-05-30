@@ -299,8 +299,7 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   delete userState[userId];
   delete userBusy[userId];
   
-  await remove(ref(db, `states/${userId}`);
-
+  await remove(ref(db, `states/${userId}`));
   // بررسی ثبت کاربر و دریافت اطلاعات
   await ensureUser(msg.from);
   const user = await getUser(userId);
