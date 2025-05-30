@@ -49,31 +49,34 @@ async function getUser(db, userId) {
 
 // ------------ ویرایش اصلی اینجاست: addToQueue ---------------
 async function addToQueue({ userId, mode, db, bot, userState }) {
+  const uid = String(userId);
+
   for (let i = 0; i < teammateQueue[mode].length; i++) {
     const partnerId = teammateQueue[mode][i];
+    const pid = String(partnerId);
 
-    // اگر رابطه بلاک بین این دو نفر وجود دارد
+    // اگر رابطه بلاک بین این دو نفر وجود دارد، رد کن و برو سراغ بعدی
     if (
-      (blockedUsers[userId] && blockedUsers[userId].includes(partnerId)) ||
-      (blockedUsers[partnerId] && blockedUsers[partnerId].includes(userId))
+      (blockedUsers[uid] && blockedUsers[uid].includes(pid)) ||
+      (blockedUsers[pid] && blockedUsers[pid].includes(uid))
     ) {
-      continue; // این دو نفر نباید مچ بشن، برو سراغ بعدی
+      continue;
     }
 
-    // اگر به اینجا رسید یعنی جفت مناسبه
+    // مچ شدن
     teammateQueue[mode].splice(i, 1);
 
-    chatPairs[userId] = partnerId;
-    chatPairs[partnerId] = userId;
-    userState[userId].anon_canceled = false;
-    userState[partnerId].anon_canceled = false;
-    userState[userId] = { step: 'in_anonymous_chat', chatPartner: partnerId, mode };
-    userState[partnerId] = { step: 'in_anonymous_chat', chatPartner: userId, mode };
+    chatPairs[uid] = pid;
+    chatPairs[pid] = uid;
 
-    const user = await getUser(db, userId);
-    const partner = await getUser(db, partnerId);
-    await update(ref(db, `users/${userId}`), { findChanceUsed: (user.findChanceUsed || 0) + 1 });
-    await update(ref(db, `users/${partnerId}`), { findChanceUsed: (partner.findChanceUsed || 0) + 1 });
+    userState[uid] = { step: 'in_anonymous_chat', chatPartner: pid, mode };
+    userState[pid] = { step: 'in_anonymous_chat', chatPartner: uid, mode };
+
+    const user = await getUser(db, uid);
+    const partner = await getUser(db, pid);
+
+    await update(ref(db, `users/${uid}`), { findChanceUsed: (user.findChanceUsed || 0) + 1 });
+    await update(ref(db, `users/${pid}`), { findChanceUsed: (partner.findChanceUsed || 0) + 1 });
 
     const info1 = profileToString(user.teammate_profile);
     const info2 = profileToString(partner.teammate_profile);
@@ -88,16 +91,17 @@ async function addToQueue({ userId, mode, db, bot, userState }) {
       }
     };
 
-    await bot.sendMessage(userId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info2}\n\nچت ناشناس  از همین الان فعال شد، پیام بده!`, keyboard);
-    await bot.sendMessage(partnerId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info1}\n\nچت ناشناس فعال شد، پیام بده!`, keyboard);
+    await bot.sendMessage(uid, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info2}\n\nچت ناشناس فعال شد، پیام بده!`, keyboard);
+    await bot.sendMessage(pid, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info1}\n\nچت ناشناس فعال شد، پیام بده!`, keyboard);
     return true;
   }
 
-  // جلوگیری از ورود تکراری به صف
-  if (!teammateQueue[mode].includes(userId)) {
-    teammateQueue[mode].push(userId);
+  // اضافه شدن به صف اگر کسی برای مچ نبود
+  if (!teammateQueue[mode].includes(uid)) {
+    teammateQueue[mode].push(uid);
   }
-  await bot.sendMessage(userId, `🔎در حال جستجو برای هم‌تیمی (${mode === 'ranked' ? 'رنک' : 'کلاسیک'})...\nتا پیدا شدن چت کنسل نمی‌شه.\nبرای لغو /cancel را بزنید.`);
+
+  await bot.sendMessage(uid, `🔎 در حال جست‌وجو برای هم‌تیمی (${mode === 'ranked' ? 'رنک' : 'کلاسیک'})...\nتا پیدا شدن چت کنسل نمی‌شه.\nبرای لغو /cancel را بزنید.`);
   return false;
 }
 // ------------ پایان بخش ویرایش اصلی -------------
