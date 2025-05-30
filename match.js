@@ -37,6 +37,13 @@ function profileToString(profile) {
   ].join('\n');
 }
 
+async function getBlockedList(db, userId) {
+  const snap = await get(ref(db, `users/${userId}/blocked`));
+  if (!snap.exists()) return [];
+  const blockedObj = snap.val();
+  return Object.keys(blockedObj);
+}
+
 function getMaxDailyChance(user) {
   if (user.maxDailyChance) return user.maxDailyChance;
   return 3 + Math.floor((user.invites || 0) / 5);
@@ -50,16 +57,15 @@ async function getUser(db, userId) {
 // ------------ ویرایش اصلی اینجاست: addToQueue ---------------
 async function addToQueue({ userId, mode, db, bot, userState }) {
   const uid = String(userId);
+  const myBlocked = await getBlockedList(db, uid);
 
   for (let i = 0; i < teammateQueue[mode].length; i++) {
     const partnerId = teammateQueue[mode][i];
     const pid = String(partnerId);
+    const partnerBlocked = await getBlockedList(db, pid);
 
     // اگر رابطه بلاک بین این دو نفر وجود دارد، رد کن و برو سراغ بعدی
-    if (
-      (blockedUsers[uid] && blockedUsers[uid].includes(pid)) ||
-      (blockedUsers[pid] && blockedUsers[pid].includes(uid))
-    ) {
+    if (myBlocked.includes(pid) || partnerBlocked.includes(uid)) {
       continue;
     }
 
