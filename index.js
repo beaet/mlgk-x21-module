@@ -6,6 +6,7 @@ const { getDatabase, ref, set, get, update, remove, push } = require('firebase/d
 const userBusy = {};
 const userCooldown = {};
 const app = express();
+const blockedUsers = {};
 const spamTracker = {};
 const startCooldown = new Map();
 const { startChallenge, handleAnswer } = require('./challenge');
@@ -298,7 +299,7 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   delete userState[userId];
   delete userBusy[userId];
   
-  
+  await remove(ref(db, `states/${userId}`);
 
   // بررسی ثبت کاربر و دریافت اطلاعات
   await ensureUser(msg.from);
