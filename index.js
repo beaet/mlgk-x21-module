@@ -1758,10 +1758,6 @@ let txt = `🎯 اسکواد: ${req.squad_name}\n🎭نقش مورد نیاز: $
   });
 }
 
-app.get("/health", (req, res) => {
-  res.send("OK");
-});
-
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
   });
