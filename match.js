@@ -49,7 +49,6 @@ async function getUser(db, userId) {
 
 // ------------ ویرایش اصلی اینجاست: addToQueue ---------------
 async function addToQueue({ userId, mode, db, bot, userState }) {
-  // حلقه تا زمانی که کسی در صف باشد
   for (let i = 0; i < teammateQueue[mode].length; i++) {
     const partnerId = teammateQueue[mode][i];
 
@@ -62,10 +61,8 @@ async function addToQueue({ userId, mode, db, bot, userState }) {
     }
 
     // اگر به اینجا رسید یعنی جفت مناسبه
-    // حالا partnerId رو از صف بردار (با splice)
     teammateQueue[mode].splice(i, 1);
 
-    // بقیه کد جفت کردن مثل قبل:
     chatPairs[userId] = partnerId;
     chatPairs[partnerId] = userId;
     userState[userId].anon_canceled = false;
@@ -73,7 +70,6 @@ async function addToQueue({ userId, mode, db, bot, userState }) {
     userState[userId] = { step: 'in_anonymous_chat', chatPartner: partnerId, mode };
     userState[partnerId] = { step: 'in_anonymous_chat', chatPartner: userId, mode };
 
-    // شانس روزانه کم کن (و بقیه...)
     const user = await getUser(db, userId);
     const partner = await getUser(db, partnerId);
     await update(ref(db, `users/${userId}`), { findChanceUsed: (user.findChanceUsed || 0) + 1 });
@@ -97,8 +93,10 @@ async function addToQueue({ userId, mode, db, bot, userState }) {
     return true;
   }
 
-  // اگر هیچ کسی مناسب نبود، کاربر فعلی بره تو صف
-  teammateQueue[mode].push(userId);
+  // جلوگیری از ورود تکراری به صف
+  if (!teammateQueue[mode].includes(userId)) {
+    teammateQueue[mode].push(userId);
+  }
   await bot.sendMessage(userId, `🔎در حال جستجو برای هم‌تیمی (${mode === 'ranked' ? 'رنک' : 'کلاسیک'})...\nتا پیدا شدن چت کنسل نمی‌شه.\nبرای لغو /cancel را بزنید.`);
   return false;
 }
