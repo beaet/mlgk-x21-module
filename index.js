@@ -406,10 +406,8 @@ const now = Date.now();
   const currentText = query.message.text;
   const currentMarkup = query.message.reply_markup || null;
   
-  
-  
   // ⛔ رد کردن بررسی برای ادمین
-  if (userId !== ADMIN_ID) {
+  if (userId !== adminId) {
     // بررسی بن موقت
     if (spamTracker[userId]?.isBanned && now < spamTracker[userId].isBannedUntil) {
       return bot.answerCallbackQuery(query.id, {
