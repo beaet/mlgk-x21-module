@@ -280,37 +280,51 @@ function sendMainMenu(userId, from = {}, messageId = null, currentText = null, c
 // ---- /start with referral ----
 bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   const userId = msg.from.id;
-  delete userState[userId];
-  delete userBusy[userId];
   const now = Date.now();
   const refId = match[1] ? parseInt(match[1]) : null;
-  
-   // بررسی ضداسپم: فقط یکبار در 3 ثانیه اجازه می‌ده
+
+  // جلوگیری از اسپم /start (حداکثر هر 3 ثانیه یکبار)
   if (startCooldown.has(userId) && now - startCooldown.get(userId) < 3000) {
-    return; // هیچ واکنشی نده
+    return; // نادیده بگیر
+  }
+  startCooldown.set(userId, now); // ثبت زمان جدید
+
+  // وضعیت ربات فعال/غیرفعال
+  if (!botActive && userId !== adminId) {
+    return bot.sendMessage(userId, "⛔️ ربات موقتاً خاموش است.");
   }
 
-  startCooldown.set(userId, now); // زمان جدید ذخیره کن
-  
-  if (!botActive && msg.from.id !== adminId) {
-    return bot.sendMessage(msg.from.id, "ربات موقتاً خاموش است.");
-  }
+  // ریست وضعیت‌های موقت (state) بدون حذف اطلاعات اصلی کاربر
+  delete userState[userId];
+  delete userBusy[userId];
 
+  await remove(ref(db, `states/${userId}`));
+
+  // بررسی ثبت کاربر و دریافت اطلاعات
   await ensureUser(msg.from);
   const user = await getUser(userId);
+
+  // اگر بن شده باشد
   if (user?.banned) {
-    return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده از ربات را ندارید.');
+    return bot.sendMessage(userId, '🚫 شما بن شده‌اید و اجازه استفاده از ربات را ندارید.');
   }
-  if (refId && refId !== userId) {
+
+  // بررسی لینک دعوت
+  if (refId && refId !== userId && !user.invited_by) {
     const refUser = await getUser(refId);
-    if (refUser && !user.invited_by) {
+    if (refUser) {
       await update(userRef(userId), { invited_by: refId });
       await updatePoints(refId, 5);
       await update(userRef(refId), { invites: (refUser.invites || 0) + 1 });
+
       bot.sendMessage(refId, `🎉 یک نفر با لینک دعوت شما وارد ربات شد و 5 امتیاز گرفتید!`);
     }
   }
+
+  // بازنشانی state (null کردن)
   userState[userId] = null;
+
+  // نمایش منوی اصلی
   sendMainMenu(userId);
 });
 
