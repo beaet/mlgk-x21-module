@@ -17,7 +17,7 @@ const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = requ
 const token = process.env.BOT_TOKEN;
 const adminId = Number(process.env.ADMIN_ID);
 const webhookUrl = process.env.WEBHOOK_URL;
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 10000;
 let botActive = true
 const MENU_BUTTONS = [
   { key: 'calculate_rate', label: '📊محاسبه ریت' },
