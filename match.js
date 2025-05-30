@@ -1,19 +1,21 @@
-// match.js
 const { ref, update, get } = require('firebase/database');
+
+// ---------------------
+// فرض: این آبجکت در ابتدای فایل هست یا در ماژول اصلی تعریف شده و import میشه
+const blockedUsers = {}; // { userId: [blockedUserId, ...], ... }
+// ---------------------
 
 const teammateQueue = {
   ranked: [],
   classic: []
 };
 const chatPairs = {}; // userId: partnerId
-// بالای فایل
 const chatHistory = {}; // key: `${userA}_${userB}`; value: array of messages
 
 function getChatKey(userA, userB) {
   return [userA, userB].sort().join('_');
 }
 
-// پاکسازی پیام‌های بالای ۲ روز (۴۸ ساعت)
 function cleanOldChats(hours = 48) {
   const now = Date.now();
   const expireMs = hours * 60 * 60 * 1000;
@@ -35,28 +37,35 @@ function profileToString(profile) {
   ].join('\n');
 }
 
-
-
 function getMaxDailyChance(user) {
-  // اگر maxDailyChance دستی ست شده بود، همان را برگردان
   if (user.maxDailyChance) return user.maxDailyChance;
   return 3 + Math.floor((user.invites || 0) / 5);
 }
+
 async function getUser(db, userId) {
   const snap = await get(ref(db, `users/${userId}`));
   return snap.exists() ? snap.val() : null;
 }
 
+// ------------ ویرایش اصلی اینجاست: addToQueue ---------------
 async function addToQueue({ userId, mode, db, bot, userState }) {
-  // اگر کسی تو صف هست که منتظر همین مود باشه
-  if (teammateQueue[mode].length > 0) {
+  while (teammateQueue[mode].length > 0) {
     const partnerId = teammateQueue[mode].shift();
+
+    // ------ جلوگیری از جفت شدن کاربران بلاک‌شده ------
+    if (
+      (blockedUsers[userId] && blockedUsers[userId].includes(partnerId)) ||
+      (blockedUsers[partnerId] && blockedUsers[partnerId].includes(userId))
+    ) {
+      // این دو نباید جفت بشن، برو سراغ بعدی
+      continue;
+    }
+    // -----------------------------------------------
+
     // هر دو طرف وارد چت ناشناس میشن
     chatPairs[userId] = partnerId;
     chatPairs[partnerId] = userId;
-userState[userId].anon_canceled = false;
-  userState[partnerId].anon_canceled = false;
-    userState[userId] = { step: 'in_anonymous_chat', chatPartner: partnerId, mode };
+: partnerId, mode };
     userState[partnerId] = { step: 'in_anonymous_chat', chatPartner: userId, mode };
 
     // شانس روزانه کم کن
@@ -67,7 +76,7 @@ userState[userId].anon_canceled = false;
 
     // اطلاعات پروفایل برای نمایش به طرف مقابل
     const info1 = profileToString(user.teammate_profile);
-const info2 = profileToString(partner.teammate_profile);
+    const info2 = profileToString(partner.teammate_profile);
 
     // پیام و دکمه
     const keyboard = {
@@ -81,15 +90,16 @@ const info2 = profileToString(partner.teammate_profile);
     };
 
     await bot.sendMessage(userId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info2}\n\nچت ناشناس  از همین الان فعال شد، پیام بده!`, keyboard);
-await bot.sendMessage(partnerId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info1}\n\nچت ناشناس فعال شد، پیام بده!`, keyboard);
+    await bot.sendMessage(partnerId, `✅ یک هم‌تیمی برای شما پیدا شد!\n\nاطلاعات طرف مقابل:\n${info1}\n\nچت ناشناس فعال شد، پیام بده!`, keyboard);
     return true;
-  } else {
-    // وارد صف بشه
-    teammateQueue[mode].push(userId);
-    await bot.sendMessage(userId, `🔎در حال جستجو برای هم‌تیمی (${mode === 'ranked' ? 'رنک' : 'کلاسیک'})...\nتا پیدا شدن چت کنسل نمی‌شه.\nبرای لغو /cancel را بزنید.`);
-    return false;
   }
+
+  // اگر کسی پیدا نشد، وارد صف بشه
+  teammateQueue[mode].push(userId);
+  await bot.sendMessage(userId, `🔎در حال جستجو برای هم‌تیمی (${mode === 'ranked' ? 'رنک' : 'کلاسیک'})...\nتا پیدا شدن چت کنسل نمی‌شه.\nبرای لغو /cancel را بزنید.`);
+  return false;
 }
+// ------------ پایان بخش ویرایش اصلی -------------
 
 function removeFromQueue(userId) {
   for (const mode of Object.keys(teammateQueue)) {
@@ -105,7 +115,6 @@ function leaveChat(userId, userState, bot, returnChanceForPartner = false, db = 
     if (userState[partnerId]?.step === 'in_anonymous_chat') {
       userState[partnerId] = null;
       bot.sendMessage(partnerId, 'طرف مقابل چت را لغو کرد!');
-      // اگر باید شانس طرف مقابل برگرده
       if (returnChanceForPartner && db) {
         (async () => {
           const partner = await getUser(db, partnerId);
@@ -134,5 +143,7 @@ module.exports = {
   addToQueue,
   removeFromQueue,
   leaveChat,
-  isInChat
+  isInChat,
+  // اگر جای دیگری هم نیاز داشتی
+  // blockedUsers
 };
