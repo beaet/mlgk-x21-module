@@ -192,14 +192,9 @@ const supportChatMap = {};
   await fetchBotActiveStatus();
   // اینجا بقیه کدهای bot و express را بنویس
   // مثلاً:
-  const bot = new TelegramBot(token, { polling: false });
-  bot.setWebHook(`${webhookUrl}/bot${token}`);
+  const bot = new TelegramBot(token, { polling: true });
+app.use(express.json());
 
-  app.use(express.json());
-  app.post(`/bot${token}`, (req, res) => {
-    bot.processUpdate(req.body);
-    res.sendStatus(200);
-  });
 // ---- Main Menu ----
 function mainMenuKeyboard() {
   return {
@@ -1758,6 +1753,9 @@ let txt = `🎯 اسکواد: ${req.squad_name}\n🎭نقش مورد نیاز: $
   });
 }
 
+app.get('/', (req, res) => {
+  res.send('ربات فعال است');
+});
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
