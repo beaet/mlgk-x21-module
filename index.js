@@ -345,9 +345,7 @@ async function setBotActiveStatus(isActive) {
 (async () => {
   await fetchBotActiveStatus(); // اول وضعیت بررسی بشه
 
-  const bot = new TelegramBot(token, { polling: true }); // بات فعال شه
-  console.log('✅ Bot started with polling...');
-
+  
 
 async function fetchBotActiveStatus() {
   const snap = await get(ref(db, 'settings/bot_active'));
