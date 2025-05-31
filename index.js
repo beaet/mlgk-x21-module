@@ -1,4 +1,5 @@
 const bot = require('./bot');
+await bot.deleteWebhook();
 require('dotenv').config();
 const express = require('express');
 const { initializeApp } = require('firebase/app');
@@ -16,7 +17,6 @@ const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = requ
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
 const adminId = Number(process.env.ADMIN_ID);
-const webhookUrl = process.env.WEBHOOK_URL;
 const port = process.env.PORT || 10000;
 let botActive = true
 const MENU_BUTTONS = [
@@ -289,7 +289,6 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   }
   startCooldown.set(userId, now); // ثبت زمان جدید
 
-  // هندلر برای خطاهای polling
 })();
 
   // وضعیت ربات فعال/غیرفعال
