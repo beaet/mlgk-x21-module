@@ -192,7 +192,7 @@ const supportChatMap = {};
   await fetchBotActiveStatus();
   // اینجا بقیه کدهای bot و express را بنویس
   // مثلاً:
-  const bot = new TelegramBot(token, { polling: false });
+  const bot = new TelegramBot(token, { polling: true });
 
   app.use(express.json());
   app.post(`/bot${token}`, (req, res) => {
