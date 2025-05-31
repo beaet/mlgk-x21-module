@@ -63,6 +63,11 @@ async function ensureUser(user) {
     });
   }
 }
+
+async function fetchBotActiveStatus() {
+  console.log('🔎 Bot status checked!');
+}
+
 async function getUser(userId) {
   const snap = await get(userRef(userId));
   return snap.exists() ? snap.val() : null;
@@ -285,6 +290,13 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   }
   startCooldown.set(userId, now); // ثبت زمان جدید
 
+  // هندلر برای خطاهای polling
+  bot.on('polling_error', (error) => {
+    console.error('❌ Polling error:', error.code, error.message);
+  });
+
+})();
+
   // وضعیت ربات فعال/غیرفعال
   if (!botActive && userId !== adminId) {
     return bot.sendMessage(userId, "⛔️ ربات موقتاً خاموش است.");
@@ -329,6 +341,13 @@ async function setBotActiveStatus(isActive) {
   await set(ref(db, 'settings/bot_active'), isActive ? 1 : 0);
   botActive = !!isActive;
 }
+
+(async () => {
+  await fetchBotActiveStatus(); // اول وضعیت بررسی بشه
+
+  const bot = new TelegramBot(token, { polling: true }); // بات فعال شه
+  console.log('✅ Bot started with polling...');
+
 
 async function fetchBotActiveStatus() {
   const snap = await get(ref(db, 'settings/bot_active'));
@@ -449,7 +468,7 @@ const now = Date.now();
     }
 
     // اعمال بن موقت
-    if (spamTracker[userId].count >= 6) {
+    if (spamTracker[userId].count >= 8) {
       spamTracker[userId].isBanned = true;
       spamTracker[userId].isBannedUntil = now + 60000; // 60 ثانیه بن
       return bot.answerCallbackQuery(query.id, {
@@ -810,7 +829,7 @@ if (data === 'profile') {
     `🏅 رنک: ${rank}\n` +
     `🦸‍♂️ هیرو مین: ${mainHero}\n` +
     `🎯 رول اصلی: ${mainRole}\n` +
-    `🆔آیدی عددی یا اسم: ${gameId}`;
+    `🎮آیدی یا اسم گیم: ${gameId}`;
   return bot.sendMessage(userId, profileMessage, {
     reply_markup: {
       inline_keyboard: [
@@ -1211,7 +1230,7 @@ if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
       return bot.sendMessage(userId, `می‌خوای امتیاز بیشتری بگیری؟ 🎁
 لینک اختصاصی خودتو برای دوستات بفرست!
 هر کسی که با لینک تو وارد ربات بشه، ۵ امتیاز دائمی می‌گیری ⭐️
-لینک دعوت مخصوص شما⬇️:\nhttps://t.me/mlbbratebot?start=${userId}`);
+لینک دعوت مخصوص شما⬇️:\nhttps://t.me/MLStudioBot?start=${userId}`);
 
     case 'buy':
       await bot.answerCallbackQuery(query.id);
@@ -1755,6 +1774,10 @@ let txt = `🎯 اسکواد: ${req.squad_name}\n🎭نقش مورد نیاز: $
 
 app.get('/', (req, res) => {
   res.send('ربات فعال است');
+});
+
+app.get('/ping', (req, res) => {
+  res.send('Bot is alive!');
 });
 
 app.listen(port, () => {
