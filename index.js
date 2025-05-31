@@ -63,6 +63,11 @@ async function ensureUser(user) {
     });
   }
 }
+
+async function fetchBotActiveStatus() {
+  console.log('🔎 Bot status checked!');
+}
+
 async function getUser(userId) {
   const snap = await get(userRef(userId));
   return snap.exists() ? snap.val() : null;
@@ -285,6 +290,13 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   }
   startCooldown.set(userId, now); // ثبت زمان جدید
 
+  // هندلر برای خطاهای polling
+  bot.on('polling_error', (error) => {
+    console.error('❌ Polling error:', error.code, error.message);
+  });
+
+})();
+
   // وضعیت ربات فعال/غیرفعال
   if (!botActive && userId !== adminId) {
     return bot.sendMessage(userId, "⛔️ ربات موقتاً خاموش است.");
@@ -329,6 +341,13 @@ async function setBotActiveStatus(isActive) {
   await set(ref(db, 'settings/bot_active'), isActive ? 1 : 0);
   botActive = !!isActive;
 }
+
+(async () => {
+  await fetchBotActiveStatus(); // اول وضعیت بررسی بشه
+
+  const bot = new TelegramBot(token, { polling: true }); // بات فعال شه
+  console.log('✅ Bot started with polling...');
+
 
 async function fetchBotActiveStatus() {
   const snap = await get(ref(db, 'settings/bot_active'));
