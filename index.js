@@ -1,6 +1,5 @@
-const bot = require('./bot');
-await bot.deleteWebhook();
 require('dotenv').config();
+const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
@@ -17,7 +16,8 @@ const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = requ
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
 const adminId = Number(process.env.ADMIN_ID);
-const port = process.env.PORT || 10000;
+const webhookUrl = process.env.WEBHOOK_URL;
+const port = process.env.PORT || 8080;
 let botActive = true
 const MENU_BUTTONS = [
   { key: 'calculate_rate', label: '📊محاسبه ریت' },
@@ -63,11 +63,6 @@ async function ensureUser(user) {
     });
   }
 }
-
-async function fetchBotActiveStatus() {
-  console.log('🔎 Bot status checked!');
-}
-
 async function getUser(userId) {
   const snap = await get(userRef(userId));
   return snap.exists() ? snap.val() : null;
@@ -197,8 +192,14 @@ const supportChatMap = {};
   await fetchBotActiveStatus();
   // اینجا بقیه کدهای bot و express را بنویس
   // مثلاً:
-app.use(express.json());
+  const bot = new TelegramBot(token, { polling: false });
+  bot.setWebHook(`${webhookUrl}/bot${token}`);
 
+  app.use(express.json());
+  app.post(`/bot${token}`, (req, res) => {
+    bot.processUpdate(req.body);
+    res.sendStatus(200);
+  });
 // ---- Main Menu ----
 function mainMenuKeyboard() {
   return {
@@ -289,8 +290,6 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   }
   startCooldown.set(userId, now); // ثبت زمان جدید
 
-})();
-
   // وضعیت ربات فعال/غیرفعال
   if (!botActive && userId !== adminId) {
     return bot.sendMessage(userId, "⛔️ ربات موقتاً خاموش است.");
@@ -335,11 +334,6 @@ async function setBotActiveStatus(isActive) {
   await set(ref(db, 'settings/bot_active'), isActive ? 1 : 0);
   botActive = !!isActive;
 }
-
-(async () => {
-  await fetchBotActiveStatus(); // اول وضعیت بررسی بشه
-
-  
 
 async function fetchBotActiveStatus() {
   const snap = await get(ref(db, 'settings/bot_active'));
@@ -460,7 +454,7 @@ const now = Date.now();
     }
 
     // اعمال بن موقت
-    if (spamTracker[userId].count >= 8) {
+    if (spamTracker[userId].count >= 6) {
       spamTracker[userId].isBanned = true;
       spamTracker[userId].isBannedUntil = now + 60000; // 60 ثانیه بن
       return bot.answerCallbackQuery(query.id, {
@@ -821,7 +815,7 @@ if (data === 'profile') {
     `🏅 رنک: ${rank}\n` +
     `🦸‍♂️ هیرو مین: ${mainHero}\n` +
     `🎯 رول اصلی: ${mainRole}\n` +
-    `🎮آیدی یا اسم گیم: ${gameId}`;
+    `🆔آیدی عددی یا اسم: ${gameId}`;
   return bot.sendMessage(userId, profileMessage, {
     reply_markup: {
       inline_keyboard: [
@@ -1764,13 +1758,6 @@ let txt = `🎯 اسکواد: ${req.squad_name}\n🎭نقش مورد نیاز: $
   });
 }
 
-app.get('/', (req, res) => {
-  res.send('ربات فعال است');
-});
-
-app.get('/ping', (req, res) => {
-  res.send('Bot is alive!');
-});
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
