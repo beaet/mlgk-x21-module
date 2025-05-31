@@ -289,12 +289,6 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   }
   startCooldown.set(userId, now); // ثبت زمان جدید
 
-  // هندلر برای خطاهای polling
-  bot.on('polling_error', (error) => {
-    console.error('❌ Polling error:', error.code, error.message);
-  });
-
-})();
 
   // وضعیت ربات فعال/غیرفعال
   if (!botActive && userId !== adminId) {
