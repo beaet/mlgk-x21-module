@@ -17,7 +17,7 @@ const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = requ
 const token = process.env.BOT_TOKEN;
 const adminId = Number(process.env.ADMIN_ID);
 const webhookUrl = process.env.WEBHOOK_URL;
-const port = process.env.PORT || 10000;
+const port = process.env.PORT || 8080;
 let botActive = true
 const MENU_BUTTONS = [
   { key: 'calculate_rate', label: '📊محاسبه ریت' },
@@ -299,7 +299,7 @@ bot.onText(/\/start(?: (\d+))?/, async (msg, match) => {
   delete userState[userId];
   delete userBusy[userId];
   
-  await remove(ref(db, `states/${userId}`);
+  await remove(ref(db, `states/${userId}`));
 
   // بررسی ثبت کاربر و دریافت اطلاعات
   await ensureUser(msg.from);
