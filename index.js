@@ -6,6 +6,7 @@ const { getDatabase, ref, set, get, update, remove, push } = require('firebase/d
 const userBusy = {};
 const userCooldown = {};
 const app = express();
+const userStates = {};
 const blockedUsers = {};
 const spamTracker = {};
 const startCooldown = new Map();
@@ -14,6 +15,7 @@ const {
   showGemPackages,
   handleBuyGemStep,
   handleGemContinue,
+  handleGemCallback,
   handleGemUserReply,
   handlePhotoReceipt,
   handleGemAdminAction,
@@ -934,6 +936,11 @@ if (data.startsWith('gem_done_') || data.startsWith('gem_cancel_')) {
 // پنل مدیریت بسته‌های جم
 if (data === 'admin_gem_panel' && userId === adminId) {
   await showGemAdminPanel(bot, userId, db);
+  return;
+}
+
+if (data.startsWith('gem_')) {
+  await handleGemCallback(query, bot, db, userStates, adminId);
   return;
 }
 
