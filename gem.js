@@ -1,15 +1,14 @@
 const { get, set, ref, push, remove, update } = require("firebase/database");
-const fs = require("fs");
-
-const adminId = 381183017; // آیدی عددی ادمین
-const userStates = {};     // وضعیت مراحل کاربران
+const adminId = 381183017;
+const userStates = {};
 const gemOrdersRef = (id) => ref(db, `gem_orders/${id}`);
 
+// نمایش بسته‌ها به کاربر
 async function showGemPackages(userId, bot, db) {
   const snap = await get(ref(db, "gem_packages"));
   const list = snap.exists() ? snap.val() : {};
   const buttons = Object.keys(list).map((key) => [
-    { text: `${list[key].label}`, callback_data: `buy_gem_${key}` }
+    { text: list[key].label, callback_data: `buy_gem_${key}` }
   ]);
 
   if (!buttons.length) {
@@ -22,6 +21,7 @@ async function showGemPackages(userId, bot, db) {
   });
 }
 
+// مرحله انتخاب بسته
 async function handleBuyGemStep(userId, data, bot, db) {
   const key = data.replace("buy_gem_", "");
   const snap = await get(ref(db, `gem_packages/${key}`));
@@ -40,19 +40,23 @@ async function handleBuyGemStep(userId, data, bot, db) {
   );
 }
 
+// شروع فرم سفارش
 async function handleGemContinue(userId, bot, db, query) {
   const key = query.data.replace("gem_continue_", "");
   const snap = await get(ref(db, `gem_packages/${key}`));
   if (!snap.exists()) return;
 
   userStates[userId] = { type: "gem", step: "fullname", packKey: key, data: {} };
+
   await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
     chat_id: query.message.chat.id,
     message_id: query.message.message_id
   });
+
   await bot.sendMessage(userId, "📝 لطفاً نام و نام خانوادگی خود را وارد کنید:");
 }
 
+// مراحل ثبت فرم توسط کاربر
 async function handleGemUserReply(userId, text, bot, db) {
   const state = userStates[userId];
   if (!state || state.type !== "gem") return;
@@ -91,17 +95,12 @@ async function handleGemUserReply(userId, text, bot, db) {
       );
       break;
 
-    case "receipt":
-      if (!text || !text.startsWith("http")) {
-        await bot.sendMessage(userId, "❌ لطفاً فقط تصویر رسید را ارسال کنید.");
-        return;
-      }
-      // فیک URL حذف شود. در نسخه اصلی باید پیام تصویری چک شود.
+    default:
       break;
   }
 }
 
-// پیام تصویری از رسید
+// پردازش تصویر رسید پرداخت
 async function handlePhotoReceipt(msg, bot, db) {
   const userId = msg.from.id;
   const state = userStates[userId];
@@ -125,9 +124,8 @@ async function handlePhotoReceipt(msg, bot, db) {
 
   await bot.sendMessage(userId, "✅ سفارش شما ثبت شد و در صف بررسی قرار گرفت.");
 
-  // ارسال برای ادمین
   await bot.sendPhoto(adminId, file_id, {
-    caption: `📦 سفارش جدید جم\n\n👤 ${data.fullname}\n🎮 ${data.game_account} (${data.game_id}-${data.server_id})\n📧 ${data.telegram}\n💎 بسته: ${data.pack}\n\n`,
+    caption: `📦 سفارش جدید جم\n\n👤 ${data.fullname}\n🎮 ${data.game_account} (${data.game_id}-${data.server_id})\n📧 ${data.telegram}\n💎 بسته: ${data.pack}`,
     reply_markup: {
       inline_keyboard: [
         [
@@ -141,29 +139,45 @@ async function handlePhotoReceipt(msg, bot, db) {
   delete userStates[userId];
 }
 
-async function handleGemAdminAction(data, bot, db) {
-  const [_, action, id] = data.split("_"); // [gem, done, ID]
+// عملیات ادمین روی سفارش
+async function handleGemOrderStatusAction(data, bot, db) {
+  const [_, action, id] = data.split("_");
   const orderSnap = await get(ref(db, `gem_orders/${id}`));
   if (!orderSnap.exists()) return;
 
   const order = orderSnap.val();
-  const userId = order?.telegram?.replace("@", "") || null;
+  if (!order?.telegram) return;
 
-  if (action === "done") {
-    await bot.sendMessage(order.telegram, "✅ سفارش جم شما با موفقیت انجام شد.");
-    await update(ref(db, `gem_orders/${id}`), { status: "done" });
-  } else {
-    await bot.sendMessage(order.telegram, "❌ سفارش شما به دلایلی لغو شد. لطفاً با پشتیبانی تماس بگیرید.");
-    await update(ref(db, `gem_orders/${id}`), { status: "cancelled" });
-  }
+  const chatId = order.telegram;
+  const statusText = action === "done"
+    ? "✅ سفارش جم شما با موفقیت انجام شد."
+    : "❌ سفارش شما به دلایلی لغو شد. لطفاً با پشتیبانی تماس بگیرید.";
+
+  await bot.sendMessage(chatId, statusText);
+  await update(ref(db, `gem_orders/${id}`), { status: action });
 }
 
-// پنل مدیریت: افزودن، حذف و ویرایش بسته‌ها
+// پنل مدیریت بسته‌های جم
+async function showGemAdminPanel(bot, userId, db) {
+  const snap = await get(ref(db, "gem_packages"));
+  const list = snap.exists() ? snap.val() : {};
+
+  const buttons = Object.keys(list).map((key) => [
+    { text: `📝 ${list[key].label}`, callback_data: `gem_admin_edit_${key}` },
+    { text: "🗑 حذف", callback_data: `gem_admin_delete_${key}` }
+  ]);
+
+  buttons.push([{ text: "➕ افزودن بسته جدید", callback_data: "gem_admin_add" }]);
+
+  await bot.sendMessage(userId, "🎯 مدیریت بسته‌های جم:", {
+    reply_markup: { inline_keyboard: buttons }
+  });
+}
+
+// عملیات ادمین (افزودن/ویرایش/حذف بسته)
 async function handleGemAdminAction(bot, userId, data, query, db) {
-  // فقط برای ادمین
   if (userId !== adminId) return;
 
-  // افزودن بسته جدید
   if (data === "gem_admin_add") {
     userStates[userId] = { type: "gem_add_name" };
     await bot.sendMessage(userId, "📝 لطفاً نام بسته جم را وارد کنید:");
@@ -171,7 +185,6 @@ async function handleGemAdminAction(bot, userId, data, query, db) {
     return;
   }
 
-  // حذف بسته
   if (data.startsWith("gem_admin_delete_")) {
     const key = data.replace("gem_admin_delete_", "");
     await remove(ref(db, `gem_packages/${key}`));
@@ -180,35 +193,75 @@ async function handleGemAdminAction(bot, userId, data, query, db) {
     return;
   }
 
-  // ویرایش بسته
   if (data.startsWith("gem_admin_edit_")) {
     const key = data.replace("gem_admin_edit_", "");
     const snap = await get(ref(db, `gem_packages/${key}`));
-    if (!snap.exists()) {
-      await bot.answerCallbackQuery(query.id, { text: "بسته یافت نشد." });
-      return;
-    }
+    if (!snap.exists()) return;
+
     const gem = snap.val();
     userStates[userId] = {
       type: "gem_edit_name",
       editKey: key,
       old: gem
     };
+
     await bot.sendMessage(userId, `📝 نام جدید بسته را وارد کنید:\n(نام فعلی: ${gem.label})`);
     await bot.answerCallbackQuery(query.id);
-    return;
   }
 }
 
-// حذف خودکار سفارش‌های قدیمی (۷ روزه)
+// مدیریت مراحل افزودن یا ویرایش بسته
+async function handleGemPackageTextInput(userId, text, bot, db) {
+  const state = userStates[userId];
+  if (!state) return;
+
+  if (state.type === "gem_add_name") {
+    state.label = text;
+    state.type = "gem_add_price";
+    await bot.sendMessage(userId, "💰 قیمت بسته را وارد کنید (تومان):");
+  } else if (state.type === "gem_add_price") {
+    const price = parseInt(text);
+    if (isNaN(price)) return bot.sendMessage(userId, "❌ قیمت نامعتبر است!");
+
+    await push(ref(db, "gem_packages"), {
+      label: state.label,
+      price
+    });
+
+    delete userStates[userId];
+    await bot.sendMessage(userId, "✅ بسته جدید با موفقیت افزوده شد.");
+    await showGemAdminPanel(bot, userId, db);
+  }
+
+  else if (state.type === "gem_edit_name") {
+    state.newLabel = text;
+    state.type = "gem_edit_price";
+    await bot.sendMessage(userId, "💰 قیمت جدید بسته را وارد کنید:");
+  }
+
+  else if (state.type === "gem_edit_price") {
+    const price = parseInt(text);
+    if (isNaN(price)) return bot.sendMessage(userId, "❌ قیمت نامعتبر است!");
+
+    await update(ref(db, `gem_packages/${state.editKey}`), {
+      label: state.newLabel,
+      price
+    });
+
+    delete userStates[userId];
+    await bot.sendMessage(userId, "✅ بسته با موفقیت ویرایش شد.");
+    await showGemAdminPanel(bot, userId, db);
+  }
+}
+
+// حذف سفارش‌های قدیمی
 async function cleanupOldOrders(db) {
   const ordersSnap = await get(ref(db, "gem_orders"));
   if (!ordersSnap.exists()) return;
-  const all = ordersSnap.val();
-  const now = Date.now();
 
-  for (const key in all) {
-    if (now - all[key].timestamp > 7 * 24 * 60 * 60 * 1000) {
+  const now = Date.now();
+  for (const key in ordersSnap.val()) {
+    if (now - ordersSnap.val()[key].timestamp > 7 * 24 * 60 * 60 * 1000) {
       await remove(ref(db, `gem_orders/${key}`));
     }
   }
@@ -220,7 +273,9 @@ module.exports = {
   handleGemContinue,
   handleGemUserReply,
   handlePhotoReceipt,
-  handleGemAdminAction,
+  handleGemOrderStatusAction,
   showGemAdminPanel,
+  handleGemAdminAction,
+  handleGemPackageTextInput,
   cleanupOldOrders
 };
