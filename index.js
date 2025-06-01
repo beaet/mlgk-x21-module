@@ -192,8 +192,9 @@ const supportChatMap = {};
   await fetchBotActiveStatus();
   // اینجا بقیه کدهای bot و express را بنویس
   // مثلاً:
-  const bot = new TelegramBot(token, { polling: true });
-
+  const bot = new TelegramBot(token, { polling: false });
+    bot.setWebHook(`${webhookUrl}/bot${token}`);
+  
   app.use(express.json());
   app.post(`/bot${token}`, (req, res) => {
     bot.processUpdate(req.body);
@@ -479,7 +480,30 @@ const now = Date.now();
       ...mainMenuKeyboard()
     });
   }
+  
+  if (data === 'blocked_users_list') {
+  const list = blockedUsers[userId] || [];
+  if (list.length === 0) {
+    await bot.answerCallbackQuery(query.id);
+    return bot.sendMessage(userId, 'هیچ کاربری در لیست بلاکی‌های شما وجود ندارد (لیست بلاکی ها موقتی است)');
+  }
+  // نمایش لیست و دکمه آنبلاک
+  const keyboard = list.map(uid => [
+    { text: `آن‌بلاک کاربر ${uid}`, callback_data: `unblock_${uid}` }
+  ]);
+  await bot.answerCallbackQuery(query.id);
+  return bot.sendMessage(userId, 'لیست کاربران بلاک شده:', {
+    reply_markup: { inline_keyboard: keyboard }
+  });
+}
 
+// هندل آنبلاک کردن
+if (data.startsWith('unblock_')) {
+  const unblockId = data.replace('unblock_', '');
+  blockedUsers[userId] = (blockedUsers[userId] || []).filter(uid => uid != unblockId);
+  await bot.answerCallbackQuery(query.id, { text: 'کاربر آنبلاک شد.', show_alert: true });
+  return bot.sendMessage(userId, `کاربر ${unblockId} از لیست بلاک خارج شد.`);
+}
   
   if (data === 'ml_news') {
   const cooldownRef = ref(db, `cooldowns/news/${userId}`);
@@ -547,6 +571,7 @@ if (data === 'find_teammate') {
       { text: '🏝️کلاسیک', callback_data: 'find_teammate_classic' }
     ],
     [{ text: '🧭ثبت اطلاعات من', callback_data: 'find_teammate_profile' }],
+    [{ text: '📋 لیست بلاکی‌ها', callback_data: 'blocked_users_list' }],
     [{ text: '🔙بازگشت', callback_data: 'main_menu' }]
   ]
     }
@@ -580,6 +605,22 @@ if (data === 'anon_cancel') {
     // اگر قبلا لغو کرده بود
     await bot.answerCallbackQuery(query.id, { text: '⛔ شما چت را قبلاً لغو کرده‌اید.', show_alert: true });
   }
+  return;
+}
+if (data === 'anon_block') {
+  const partnerId = userState[userId]?.chatPartner;
+  if (partnerId) {
+    // اضافه کردن partnerId به لیست بلاک‌شده‌های این کاربر
+    if (!blockedUsers[userId]) blockedUsers[userId] = [];
+    if (!blockedUsers[userId].includes(partnerId)) blockedUsers[userId].push(partnerId);
+
+    // پایان چت و اطلاع‌رسانی
+    userState[userId] = null;
+    userState[partnerId] = null;
+    await bot.sendMessage(partnerId, '⛔ شما توسط هم‌تیمی بلاک شدید و چت پایان یافت.');
+    await bot.sendMessage(userId, '✅ کاربر مقابل بلاک شد و چت پایان یافت. برای شروع دوباره /start کنید.');
+  }
+  await bot.answerCallbackQuery(query.id, { text: 'کاربر بلاک شد و چت پایان یافت.', show_alert: true });
   return;
 }
 
