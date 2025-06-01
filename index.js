@@ -6,6 +6,7 @@ const { getDatabase, ref, set, get, update, remove, push } = require('firebase/d
 const userBusy = {};
 const userCooldown = {};
 const app = express();
+const userStates = {};
 const blockedUsers = {};
 const spamTracker = {};
 const startCooldown = new Map();
