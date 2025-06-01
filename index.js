@@ -10,6 +10,16 @@ const blockedUsers = {};
 const spamTracker = {};
 const startCooldown = new Map();
 const { startChallenge, handleAnswer } = require('./challenge');
+const {
+  showGemPackages,
+  handleBuyGemStep,
+  handleGemContinue,
+  handleGemUserReply,
+  handlePhotoReceipt,
+  handleGemAdminAction,
+  showGemAdminPanel,
+  cleanupOldOrders
+} = require('./gem');
 const { sendNews } = require('./news');
 const match = require('./match');
 const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = require('./pick');
@@ -31,6 +41,7 @@ const MENU_BUTTONS = [
   { key: 'profile', label: '👤 پروفایل' },
   { key: 'squad_request', label: '➕ ثبت درخواست اسکواد' },
   { key: 'view_squads', label: '👥 مشاهده اسکوادها' },
+    { key: 'buy_gem', label: '💎 خرید جم' },
   { key: 'support', label: '💬پشتیبانی' },
   { key: 'help', label: '📚راهنما' },
   { key: 'buy', label: '💰خرید امتیاز' },
@@ -48,7 +59,8 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
 global.db = db; // بعد از تعریف db این خط را اضافه کن
-
+// پاک کردن سفارش‌های قدیمی‌تر از ۷ روز
+cleanupOldOrders(db);
 // ---- User Helper Functions ----
 const userRef = userId => ref(db, `users/${userId}`);
 async function ensureUser(user) {
@@ -214,6 +226,9 @@ function mainMenuKeyboard() {
           { text: '🕹 ابزار بازی', callback_data: 'tools_menu' }
         ],
         [
+                  { text: '💎 خرید جم', callback_data: 'buy_gem' }
+        ],
+        [
           { text: '🔮 چالش', callback_data: 'challenge' }
         ],
         [
@@ -361,6 +376,9 @@ bot.onText(/\/panel/, async (msg) => {
         ],
         [
           { text: '📢 پیام همگانی', callback_data: 'broadcast' }
+        ],
+        [
+                  { text: '🛠 مدیریت جم‌ها', callback_data: 'admin_gem_panel' }
         ],
         [
           { text: '🚫بن کردن کاربر', callback_data: 'ban_user' },
@@ -888,6 +906,36 @@ if (data === 'profile') {
     userState[userId] = null;
     return;
   }
+  
+  // دکمه نمایش بسته‌های جم
+if (data === 'buy_gem') {
+  await showGemPackages(userId, bot, db);
+  return;
+}
+
+// کلیک روی یکی از بسته‌های جم برای دیدن قیمت و ادامه
+if (data.startsWith('buy_gem_')) {
+  await handleBuyGemStep(userId, data, bot, db);
+  return;
+}
+
+// ادامه فرآیند خرید بعد از دیدن قیمت
+if (data.startsWith('gem_continue_')) {
+  await handleGemContinue(userId, bot, db, query);
+  return;
+}
+
+// مدیریت ادمین: تکمیل یا لغو سفارش
+if (data.startsWith('gem_done_') || data.startsWith('gem_cancel_')) {
+  await handleGemAdminAction(data, bot, db);
+  return;
+}
+
+// پنل مدیریت بسته‌های جم
+if (data === 'admin_gem_panel' && userId === adminId) {
+  await showGemAdminPanel(bot, userId, db);
+  return;
+}
 
   // ---- اسکواد: ثبت درخواست ----
   if (data === 'squad_request') {
@@ -1321,6 +1369,18 @@ bot.on('message', async (msg) => {
   const text = msg.text || '';
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
+  
+  // ارسال تصویر رسید توسط کاربر
+if (msg.photo && userStates[msg.from.id]?.step === "receipt") {
+  await handlePhotoReceipt(msg, bot, db);
+  return;
+}
+
+// مراحل پر کردن فرم خرید جم
+if (userStates[msg.from.id]?.type === "gem") {
+  await handleGemUserReply(msg.from.id, msg.text, bot, db);
+  return;
+}
 
   if (state && state.step === 'ask_rank') {
     state.teammateProfile.rank = text;
