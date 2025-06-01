@@ -1321,8 +1321,6 @@ bot.on('message', async (msg) => {
   const text = msg.text || '';
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
-  
-  console.log('state:', state, 'userId:', userId, 'text:', text);
 
   if (state && state.step === 'ask_rank') {
     state.teammateProfile.rank = text;
