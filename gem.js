@@ -159,20 +159,45 @@ async function handleGemAdminAction(data, bot, db) {
 }
 
 // پنل مدیریت: افزودن، حذف و ویرایش بسته‌ها
-async function showGemAdminPanel(bot, userId, db) {
-  const snap = await get(ref(db, "gem_packages"));
-  const data = snap.exists() ? snap.val() : {};
-  const keys = Object.keys(data);
+async function handleGemAdminAction(bot, userId, data, query, db) {
+  // فقط برای ادمین
+  if (userId !== adminId) return;
 
-  const buttons = keys.map(k => [
-    { text: `🖊 ${data[k].label}`, callback_data: `gem_admin_edit_${k}` },
-    { text: `🗑 حذف`, callback_data: `gem_admin_delete_${k}` }
-  ]);
-  buttons.push([{ text: "➕ افزودن بسته جدید", callback_data: "gem_admin_add" }]);
+  // افزودن بسته جدید
+  if (data === "gem_admin_add") {
+    userStates[userId] = { type: "gem_add_name" };
+    await bot.sendMessage(userId, "📝 لطفاً نام بسته جم را وارد کنید:");
+    await bot.answerCallbackQuery(query.id);
+    return;
+  }
 
-  await bot.sendMessage(userId, "🎛 مدیریت بسته‌های جم:", {
-    reply_markup: { inline_keyboard: buttons }
-  });
+  // حذف بسته
+  if (data.startsWith("gem_admin_delete_")) {
+    const key = data.replace("gem_admin_delete_", "");
+    await remove(ref(db, `gem_packages/${key}`));
+    await bot.answerCallbackQuery(query.id, { text: "✅ بسته حذف شد." });
+    await showGemAdminPanel(bot, userId, db);
+    return;
+  }
+
+  // ویرایش بسته
+  if (data.startsWith("gem_admin_edit_")) {
+    const key = data.replace("gem_admin_edit_", "");
+    const snap = await get(ref(db, `gem_packages/${key}`));
+    if (!snap.exists()) {
+      await bot.answerCallbackQuery(query.id, { text: "بسته یافت نشد." });
+      return;
+    }
+    const gem = snap.val();
+    userStates[userId] = {
+      type: "gem_edit_name",
+      editKey: key,
+      old: gem
+    };
+    await bot.sendMessage(userId, `📝 نام جدید بسته را وارد کنید:\n(نام فعلی: ${gem.label})`);
+    await bot.answerCallbackQuery(query.id);
+    return;
+  }
 }
 
 // حذف خودکار سفارش‌های قدیمی (۷ روزه)
