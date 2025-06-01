@@ -6,7 +6,6 @@ const { getDatabase, ref, set, get, update, remove, push } = require('firebase/d
 const userBusy = {};
 const userCooldown = {};
 const app = express();
-const userStates = {};
 const blockedUsers = {};
 const spamTracker = {};
 const startCooldown = new Map();
@@ -1124,6 +1123,8 @@ if (data.startsWith('delete_approved_without_point_') && userId === adminId) {
   await bot.answerCallbackQuery(query.id, { text: '✅ اسکواد حذف شد بدون بازگشت امتیاز.', show_alert: true });
   return;
 }
+
+await handleGemCallback(query, bot, db, userStates, adminId);
   
 
   // ---- اسکواد: تایید توسط ادمین ----
