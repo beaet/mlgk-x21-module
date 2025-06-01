@@ -212,7 +212,7 @@ function mainMenuKeyboard() {
           { text: '🕹 ابزار بازی', callback_data: 'tools_menu' }
         ],
         [
-          { text: '🔥 چالش', callback_data: 'challenge' }
+          { text: '🔮 چالش', callback_data: 'challenge' }
         ],
         [
           { text: '🔗 دعوت دوستان', callback_data: 'referral' },
@@ -815,7 +815,7 @@ if (data === 'profile') {
     `🏅 رنک: ${rank}\n` +
     `🦸‍♂️ هیرو مین: ${mainHero}\n` +
     `🎯 رول اصلی: ${mainRole}\n` +
-    `🆔آیدی عددی یا اسم: ${gameId}`;
+    `🎮 آیدی یا اسم گیم: ${gameId}`;
   return bot.sendMessage(userId, profileMessage, {
     reply_markup: {
       inline_keyboard: [
