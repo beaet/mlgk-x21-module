@@ -35,6 +35,8 @@ const MENU_BUTTONS = [
   { key: 'help', label: '📚راهنما' },
   { key: 'buy', label: '💰خرید امتیاز' },
   { key: 'chance', label: '🍀 شانس' },
+    { key: 'anon_block', label: '⛔ بلاک هم تیمی' },
+      { key: 'blocked_users_list', label: '🚫 لیست بلاک هم تیمی' },
   { key: 'gift_code', label: '🎁 کد هدیه' },
   { key: 'ml_news', label: '📰 اخبار بازی' },
   { key: 'find_teammate', label: '🎲 پیداکردن هم‌‌ تیمی رندوم' }
