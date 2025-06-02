@@ -29,6 +29,7 @@ const MENU_BUTTONS = [
   { key: 'calculate_rate', label: '📊محاسبه ریت' },
   { key: 'calculate_wl', label: '🏆محاسبه برد و باخت' },
   { key: 'hero_counter', label: '⚔ هیرو کانتر' },
+    { key: 'buy_gem', label: '💎 جم' },
   { key: 'tournament', label: '🧩 تورنومنت' },
   { key: 'pickban_list', label: '📜 لیست پیک/بن' },
   { key: 'pick_hero', label: '🎯 رندوم پیک' },
@@ -511,11 +512,6 @@ const now = Date.now();
   });
 }
 
-  if (data === 'gem_admin_panel' && ADMINS.includes(userId)) {
-    require('./gem').showGemAdminPanel(bot, userId);
-    return;
-  }
-
 // هندل آنبلاک کردن
 if (data.startsWith('unblock_')) {
   const unblockId = data.replace('unblock_', '');
@@ -865,6 +861,36 @@ if (data === 'buy_gem') return gem.startGemShop(bot, userId, state);
   if (data.startsWith('gem_done_') || data.startsWith('gem_cancel_')) {
     return gem.handleAdminAction(bot, userId, data);
   }
+
+  // پنل مدیریت جم
+  if (data === 'gem_admin_panel' && gem.ADMINS.includes(userId)) {
+    return gem.showGemAdminPanel(bot, userId);
+  }
+
+  // اضافه کردن جم
+  if (data === 'gem_admin_add' && gem.ADMINS.includes(userId)) {
+    return gem.handleGemAdminAdd(bot, userId);
+  }
+
+  // حذف جم
+  if (data === 'gem_admin_remove' && gem.ADMINS.includes(userId)) {
+    return gem.handleGemAdminRemove(bot, userId);
+  }
+  if (data.startsWith('gem_admin_delete_') && gem.ADMINS.includes(userId)) {
+    const gemId = data.replace('gem_admin_delete_', '');
+    return gem.handleGemAdminDelete(bot, userId, gemId);
+  }
+
+  // ویرایش جم
+  if (data === 'gem_admin_edit' && gem.ADMINS.includes(userId)) {
+    return gem.handleGemAdminEdit(bot, userId);
+  }
+  if (data.startsWith('gem_admin_edit_') && gem.ADMINS.includes(userId)) {
+    const gemId = data.replace('gem_admin_edit_', '');
+    return gem.handleGemAdminEditAskPrice(bot, userId, gemId);
+  }
+
+  // اگر هیچکدام نبود، همین پیام قبلی رو بده یا بی‌توجه عبور کن
 
   // ---- لیست پیک/بن ----
   if (data === 'pickban_list') {
@@ -1360,11 +1386,6 @@ bot.on('message', async (msg) => {
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
 
-  if (!userState[userId]) {
-    userState[userId] = {};
-  }
-  const state = userState[userId];
-
   if (state && state.step === 'ask_rank') {
     state.teammateProfile.rank = text;
     state.step = 'ask_mainHero';
@@ -1374,24 +1395,29 @@ bot.on('message', async (msg) => {
   console.log('userId:', userId);
   console.log('state:', state);
 
-  // دریافت اطلاعات کاربر مرحله به مرحله
-  if (msg.text && state?.step?.startsWith('gem_')) {
-    return gem.handleGemUserData(bot, msg, state);
-  }
-  
-if (ADMINS.includes(msg.from.id) && require('./gem').adminGemState[msg.from.id]) {
-  const adminState = require('./gem').adminGemState[msg.from.id];
+// اطمینان از وجود state برای هر کاربر
+  if (!userState[userId]) userState[userId] = {};
+  const state = userState[userId];
 
-  if (adminState.step === 'edit_gem_price') {
-    return require('./gem').handleGemAdminEditSetPrice(bot, msg.from.id, msg, require('./gem').adminGemState);
-  } else {
-    return require('./gem').handleGemAdminText(bot, msg);
+  // مراحل ثبت سفارش جم (حالت متنی)
+  if (msg.text && state.step && state.step.startsWith('gem_')) {
+    return gem.handleGemUserData(bot, msg, userState);
   }
-}
 
-  // دریافت عکس رسید پرداخت
-  if (msg.photo && state[userId] && state[userId].step === 'gem_payment') {
-    return gem.handleGemPayment(bot, msg, state);
+  // مراحل مدیریت جم توسط ادمین (افزودن/ویرایش)
+  const adminGemState = gem.adminGemState;
+  if (gem.ADMINS.includes(userId) && adminGemState[userId]) {
+    const adminState = adminGemState[userId];
+    if (adminState.step === 'edit_gem_price') {
+      return gem.handleGemAdminEditSetPrice(bot, userId, msg, adminGemState);
+    } else {
+      return gem.handleGemAdminText(bot, msg);
+    }
+  }
+
+  // دریافت عکس رسید پرداخت برای جم
+  if (msg.photo && state.step === 'gem_payment') {
+    return gem.handleGemPayment(bot, msg, userState);
   }
   
   if (state && state.step === 'ask_mainHero') {
