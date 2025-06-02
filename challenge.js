@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { set, get } = require('firebase/database');
+const { getDatabase, ref, get, set } = require('firebase-admin/database');
 
 // بارگذاری سوالات از challenge.json
 function loadQuestions() {
