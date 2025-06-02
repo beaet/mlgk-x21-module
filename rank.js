@@ -1,7 +1,7 @@
 // rank.js
 
 const { ref, get, update } = require("firebase/database");
-const { userRef, getUser } = require("./helpers/user"); // مسیر را مطابق پروژه‌ات تنظیم کن
+const { userRef, getUser } = require("./user");
 
 const rankStages = ["Warrior", "Elite", "Master", "Grandmaster", "Epic", "Legend", "Mythic", "Mythical Honor", "Glorious Mythic", "Immortal"];
 
