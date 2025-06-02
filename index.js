@@ -4,7 +4,6 @@ const express = require('express');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
 const userBusy = {};
-const state = {};
 const userCooldown = {};
 const app = express();
 const blockedUsers = {};
@@ -12,16 +11,11 @@ const spamTracker = {};
 const startCooldown = new Map();
 const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
-
-const gem = require('./gem');  // ابتدا تعریف می‌کنیم
-gem.cleanOldReceipts();        // بعد استفاده می‌کنیم
-
 const match = require('./match');
 const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = require('./pick');
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
 const adminId = Number(process.env.ADMIN_ID);
-const ADMINS = [adminId];
 const webhookUrl = process.env.WEBHOOK_URL;
 const port = process.env.PORT || 10000;
 let botActive = true
@@ -29,7 +23,6 @@ const MENU_BUTTONS = [
   { key: 'calculate_rate', label: '📊محاسبه ریت' },
   { key: 'calculate_wl', label: '🏆محاسبه برد و باخت' },
   { key: 'hero_counter', label: '⚔ هیرو کانتر' },
-    { key: 'buy_gem', label: '💎 جم' },
   { key: 'tournament', label: '🧩 تورنومنت' },
   { key: 'pickban_list', label: '📜 لیست پیک/بن' },
   { key: 'pick_hero', label: '🎯 رندوم پیک' },
@@ -224,9 +217,6 @@ function mainMenuKeyboard() {
           { text: '🔮 چالش', callback_data: 'challenge' }
         ],
         [
-                          { text: '💎 خرید جم', callback_data: 'buy_gem' }
-        ],
-        [
           { text: '🔗 دعوت دوستان', callback_data: 'referral' },
           { text: '👤 پروفایل', callback_data: 'profile' }
         ],
@@ -371,9 +361,6 @@ bot.onText(/\/panel/, async (msg) => {
         ],
         [
           { text: '📢 پیام همگانی', callback_data: 'broadcast' }
-        ],
-        [
-                          { text: '🛠 مدیریت دکمه‌های ربات', callback_data: 'gem_admin_panel' }
         ],
         [
           { text: '🚫بن کردن کاربر', callback_data: 'ban_user' },
@@ -839,58 +826,6 @@ if (data === 'profile') {
     }
   });
 }
-
-if (data === 'buy_gem') return gem.startGemShop(bot, userId, state);
-
-  // انتخاب یک بسته جم
-  if (data.startsWith('buy_gem_')) {
-    const gemId = data.replace('buy_gem_', '');
-    return gem.handleGemSelect(bot, userId, gemId, state);
-  }
-  
-  // ادامه خرید پس از نمایش قیمت
-  if (data === 'gem_continue') return gem.handleGemContinue(bot, userId, state);
-
-  // لغو خرید جم
-  if (data === 'cancel_gem') {
-    state[userId] = null;
-    return bot.sendMessage(userId, 'خرید جم لغو شد.');
-  }
-
-  // مدیریت سفارش توسط ادمین (تکمیل یا لغو)
-  if (data.startsWith('gem_done_') || data.startsWith('gem_cancel_')) {
-    return gem.handleAdminAction(bot, userId, data);
-  }
-
-  // پنل مدیریت جم
-  if (data === 'gem_admin_panel' && gem.ADMINS.includes(userId)) {
-    return gem.showGemAdminPanel(bot, userId);
-  }
-
-  // اضافه کردن جم
-  if (data === 'gem_admin_add' && gem.ADMINS.includes(userId)) {
-    return gem.handleGemAdminAdd(bot, userId);
-  }
-
-  // حذف جم
-  if (data === 'gem_admin_remove' && gem.ADMINS.includes(userId)) {
-    return gem.handleGemAdminRemove(bot, userId);
-  }
-  if (data.startsWith('gem_admin_delete_') && gem.ADMINS.includes(userId)) {
-    const gemId = data.replace('gem_admin_delete_', '');
-    return gem.handleGemAdminDelete(bot, userId, gemId);
-  }
-
-  // ویرایش جم
-  if (data === 'gem_admin_edit' && gem.ADMINS.includes(userId)) {
-    return gem.handleGemAdminEdit(bot, userId);
-  }
-  if (data.startsWith('gem_admin_edit_') && gem.ADMINS.includes(userId)) {
-    const gemId = data.replace('gem_admin_edit_', '');
-    return gem.handleGemAdminEditAskPrice(bot, userId, gemId);
-  }
-
-  // اگر هیچکدام نبود، همین پیام قبلی رو بده یا بی‌توجه عبور کن
 
   // ---- لیست پیک/بن ----
   if (data === 'pickban_list') {
@@ -1382,38 +1317,11 @@ if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
 // ... ناحیه message handler بدون تغییر، فقط بخش stateهای جدید اضافه شود
 bot.on('message', async (msg) => {
   const userId = msg.from.id;
+  const state = userState[userId];
   const text = msg.text || '';
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
 
-// اطمینان از وجود state برای هر کاربر
-  if (!userState[userId]) userState[userId] = {};
-  const state = userState[userId];
-
-  console.log('userId:', userId);
-  console.log('state:', state);
-
-  // مراحل ثبت سفارش جم (حالت متنی)
-  if (msg.text && state.step && state.step.startsWith('gem_')) {
-    return gem.handleGemUserData(bot, msg, userState);
-  }
-
-  // مراحل مدیریت جم توسط ادمین (افزودن/ویرایش)
-  const adminGemState = gem.adminGemState;
-  if (gem.ADMINS.includes(userId) && adminGemState[userId]) {
-    const adminState = adminGemState[userId];
-    if (adminState.step === 'edit_gem_price') {
-      return gem.handleGemAdminEditSetPrice(bot, userId, msg, adminGemState);
-    } else {
-      return gem.handleGemAdminText(bot, msg);
-    }
-  }
-
-  // دریافت عکس رسید پرداخت برای جم
-  if (msg.photo && state.step === 'gem_payment') {
-    return gem.handleGemPayment(bot, msg, userState);
-  }
-  
   if (state && state.step === 'ask_rank') {
     state.teammateProfile.rank = text;
     state.step = 'ask_mainHero';
