@@ -1386,12 +1386,6 @@ bot.on('message', async (msg) => {
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
 
-  if (state && state.step === 'ask_rank') {
-    state.teammateProfile.rank = text;
-    state.step = 'ask_mainHero';
-    return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
-  }
-
   console.log('userId:', userId);
   console.log('state:', state);
 
@@ -1420,6 +1414,11 @@ bot.on('message', async (msg) => {
     return gem.handleGemPayment(bot, msg, userState);
   }
   
+  if (state && state.step === 'ask_rank') {
+    state.teammateProfile.rank = text;
+    state.step = 'ask_mainHero';
+    return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
+  }
   if (state && state.step === 'ask_mainHero') {
     state.teammateProfile.mainHero = text;
     state.step = 'ask_mainRole';
