@@ -1,16 +1,16 @@
 // gem.js
 
-// --- داده‌ها ---
 let gems = [
   { id: 'gem55', amount: 55, price: 120000 },
   { id: 'gem100', amount: 100, price: 200000 }
 ];
-let orders = {}; // orderId: {...}
-let paymentReceipts = {}; // orderId: { fileId, createdAt }
-const ADMINS = [123456789, 987654321]; // آیدی عددی ادمین‌ها اینجاست
-const adminGemState = {}; // adminId: { step, ... }
+let orders = {};
+let paymentReceipts = {};
+const ADMINS = [123456789, 987654321];
 
-// --- ابزار UI ---
+// ========== کاربر ==========
+
+// ساخت کیبورد دکمه‌های جم
 function getGemInlineKeyboard() {
   return {
     inline_keyboard: gems.map(gem => [
@@ -19,30 +19,19 @@ function getGemInlineKeyboard() {
   };
 }
 
-function showGemAdminPanel(bot, userId) {
-  bot.sendMessage(userId, 'مدیریت جم:', {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: '➕ افزودن جم', callback_data: 'gem_admin_add' }],
-        [{ text: '✏️ ویرایش جم', callback_data: 'gem_admin_edit' }],
-        [{ text: '❌ حذف جم', callback_data: 'gem_admin_remove' }]
-      ]
-    }
-  });
-}
-
-// --- خرید جم توسط کاربر ---
-function startGemShop(bot, userId, state) {
-  state[userId] = { step: null };
+// شروع خرید جم
+function startGemShop(bot, userId, userState) {
+  userState[userId] = { step: null };
   bot.sendMessage(userId, 'مقدار جم مورد نظر را انتخاب کن:', {
     reply_markup: getGemInlineKeyboard()
   });
 }
 
-function handleGemSelect(bot, userId, gemId, state) {
+// انتخاب جم
+function handleGemSelect(bot, userId, gemId, userState) {
   const gem = gems.find(g => g.id === gemId);
   if (!gem) return bot.sendMessage(userId, 'این بسته جم موجود نیست.');
-  state[userId] = { step: 'gem_confirm', gemId: gem.id };
+  userState[userId] = { step: 'gem_confirm', gemId: gem.id };
   bot.sendMessage(
     userId,
     `قیمت ${gem.amount} جم: ${gem.price.toLocaleString()} تومان\n\nبرای ادامه خرید روی دکمه زیر کلیک کن:`,
@@ -57,43 +46,49 @@ function handleGemSelect(bot, userId, gemId, state) {
   );
 }
 
-function handleGemContinue(bot, userId, state) {
-  state[userId].step = 'gem_get_full_name';
+// مرحله بعد خرید جم: گرفتن نام و نام خانوادگی
+function handleGemContinue(bot, userId, userState) {
+  userState[userId].step = 'gem_get_full_name';
   bot.sendMessage(userId, 'لطفاً نام و نام خانوادگی خود را وارد کن:');
 }
 
-async function handleGemUserData(bot, msg, state) {
+// جمع‌آوری اطلاعات مرحله‌ای کاربر
+async function handleGemUserData(bot, msg, userState) {
   const userId = msg.from.id;
-  const cur = state[userId];
+  const cur = userState[userId];
   if (!cur) return;
 
-  switch (cur.step) {
-    case 'gem_get_full_name':
-      cur.fullName = msg.text;
-      cur.step = 'gem_get_telegram_id';
-      return bot.sendMessage(userId, 'آیدی تلگرام خود را وارد کن (مثال: @username):');
-    case 'gem_get_telegram_id':
-      cur.telegramId = msg.text;
-      cur.step = 'gem_get_game_account';
-      return bot.sendMessage(userId, 'اکانت بازی خود را وارد کن:');
-    case 'gem_get_game_account':
-      cur.gameAccount = msg.text;
-      cur.step = 'gem_get_numeric_id';
-      return bot.sendMessage(userId, 'آیدی عددی بازی خود را وارد کن:');
-    case 'gem_get_numeric_id':
-      cur.numericGameId = msg.text;
-      cur.step = 'gem_get_server_id';
-      return bot.sendMessage(userId, 'آیدی سرور خود را وارد کن:');
-    case 'gem_get_server_id':
-      cur.serverId = msg.text;
-      cur.step = 'gem_payment';
-      return bot.sendMessage(userId, 'لطفاً مبلغ را به شماره کارت زیر واریز کن و عکس رسید را ارسال کن:\n\nشماره کارت: ۶۲۱۹-۸۶۱۰-۶۲۴۰-۴۳۲۱');
+  if (cur.step === 'gem_get_full_name') {
+    cur.fullName = msg.text;
+    cur.step = 'gem_get_telegram_id';
+    return bot.sendMessage(userId, 'آیدی تلگرام خود را وارد کن (مثال: @username):');
+  }
+  if (cur.step === 'gem_get_telegram_id') {
+    cur.telegramId = msg.text;
+    cur.step = 'gem_get_game_account';
+    return bot.sendMessage(userId, 'اکانت بازی خود را وارد کن:');
+  }
+  if (cur.step === 'gem_get_game_account') {
+    cur.gameAccount = msg.text;
+    cur.step = 'gem_get_numeric_id';
+    return bot.sendMessage(userId, 'آیدی عددی بازی خود را وارد کن:');
+  }
+  if (cur.step === 'gem_get_numeric_id') {
+    cur.numericGameId = msg.text;
+    cur.step = 'gem_get_server_id';
+    return bot.sendMessage(userId, 'آیدی سرور خود را وارد کن:');
+  }
+  if (cur.step === 'gem_get_server_id') {
+    cur.serverId = msg.text;
+    cur.step = 'gem_payment';
+    return bot.sendMessage(userId, 'لطفاً مبلغ را به شماره کارت زیر واریز کن و عکس رسید را ارسال کن:\n\nشماره کارت: ۶۲۱۹-۸۶۱۰-۶۲۴۰-۴۳۲۱');
   }
 }
 
-async function handleGemPayment(bot, msg, state) {
+// هندل ثبت عکس رسید و سفارش
+async function handleGemPayment(bot, msg, userState) {
   const userId = msg.from.id;
-  const cur = state[userId];
+  const cur = userState[userId];
   if (!cur || cur.step !== 'gem_payment' || !msg.photo) return;
 
   const orderId = `order_${Date.now()}_${userId}`;
@@ -117,7 +112,7 @@ async function handleGemPayment(bot, msg, state) {
   };
   paymentReceipts[orderId] = { fileId, createdAt: Date.now() };
 
-  // پیام به ادمین‌ها
+  // اطلاع به ادمین‌ها
   for (const adminId of ADMINS) {
     await bot.sendPhoto(adminId, fileId, {
       caption:
@@ -132,10 +127,10 @@ async function handleGemPayment(bot, msg, state) {
   }
 
   bot.sendMessage(userId, 'سفارش شما ثبت شد و در صف بررسی قرار گرفت. پس از تایید، به شما اطلاع داده خواهد شد.');
-  state[userId] = null;
+  userState[userId] = null;
 }
 
-// --- مدیریت سفارش توسط ادمین ---
+// مدیریت سفارش توسط ادمین
 function handleAdminAction(bot, adminId, data) {
   const [_, action, orderId] = data.split('_');
   const order = orders[orderId];
@@ -151,7 +146,33 @@ function handleAdminAction(bot, adminId, data) {
   }
 }
 
-// --- ادمین: افزودن جم ---
+// حذف رسیدهای پرداخت قدیمی (مثلاً هفتگی)
+function cleanOldReceipts() {
+  const now = Date.now();
+  Object.entries(paymentReceipts).forEach(([orderId, val]) => {
+    if (now - val.createdAt > 7 * 24 * 60 * 60 * 1000) {
+      delete paymentReceipts[orderId];
+      if (orders[orderId]) orders[orderId].paymentFileId = null;
+    }
+  });
+}
+
+// ========== ادمین ==========
+
+const adminGemState = {}; // adminId: { step, ... }
+
+function showGemAdminPanel(bot, userId) {
+  bot.sendMessage(userId, 'مدیریت جم:', {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '➕ افزودن جم', callback_data: 'gem_admin_add' }],
+        [{ text: '✏️ ویرایش جم', callback_data: 'gem_admin_edit' }],
+        [{ text: '❌ حذف جم', callback_data: 'gem_admin_remove' }]
+      ]
+    }
+  });
+}
+
 function handleGemAdminAdd(bot, userId) {
   adminGemState[userId] = { step: 'await_gem_name' };
   bot.sendMessage(userId, 'نام دکمه جم (مثلاً "55 جم") را وارد کنید:');
@@ -162,6 +183,7 @@ async function handleGemAdminText(bot, msg) {
   const state = adminGemState[userId];
   if (!state) return;
 
+  // افزودن جم
   if (state.step === 'await_gem_name') {
     state.gemName = msg.text;
     state.step = 'await_gem_price';
@@ -177,16 +199,17 @@ async function handleGemAdminText(bot, msg) {
   }
 }
 
-// --- ادمین: حذف جم ---
+// حذف جم - نمایش لیست برای انتخاب
 function handleGemAdminRemove(bot, userId) {
-  bot.sendMessage(userId, 'کدام جم را حذف کنیم؟', {
-    reply_markup: {
-      inline_keyboard: gems.map(g => [
-        { text: g.amount, callback_data: `gem_admin_delete_${g.id}` }
-      ])
-    }
-  });
+  const keyboard = {
+    inline_keyboard: gems.map(g =>
+      [{ text: g.amount, callback_data: `gem_admin_delete_${g.id}` }]
+    )
+  };
+  bot.sendMessage(userId, 'کدام جم را حذف کنیم؟', { reply_markup: keyboard });
 }
+
+// حذف جم - انجام حذف
 function handleGemAdminDelete(bot, userId, gemId) {
   const idx = gems.findIndex(g => g.id === gemId);
   if (idx > -1) {
@@ -197,20 +220,23 @@ function handleGemAdminDelete(bot, userId, gemId) {
   }
 }
 
-// --- ادمین: ویرایش جم ---
+// نمایش لیست جم‌ها برای ویرایش قیمت
 function handleGemAdminEdit(bot, userId) {
-  bot.sendMessage(userId, 'کدام جم را می‌خواهی ویرایش کنی؟', {
-    reply_markup: {
-      inline_keyboard: gems.map(g => [
-        { text: g.amount, callback_data: `gem_admin_edit_${g.id}` }
-      ])
-    }
-  });
+  const keyboard = {
+    inline_keyboard: gems.map(g =>
+      [{ text: g.amount, callback_data: `gem_admin_edit_${g.id}` }]
+    )
+  };
+  bot.sendMessage(userId, 'کدام جم را می‌خواهی ویرایش کنی؟', { reply_markup: keyboard });
 }
+
+// گرفتن قیمت جدید جم
 function handleGemAdminEditAskPrice(bot, userId, gemId) {
   adminGemState[userId] = { step: 'edit_gem_price', gemId };
   bot.sendMessage(userId, 'قیمت جدید را وارد کن:');
 }
+
+// ثبت قیمت جدید جم
 function handleGemAdminEditSetPrice(bot, userId, msg) {
   const state = adminGemState[userId];
   if (!state || state.step !== 'edit_gem_price') return;
@@ -226,28 +252,22 @@ function handleGemAdminEditSetPrice(bot, userId, msg) {
   adminGemState[userId] = null;
 }
 
-// --- Utility: حذف رسیدهای قدیمی ---
-function cleanOldReceipts() {
-  const now = Date.now();
-  Object.entries(paymentReceipts).forEach(([orderId, val]) => {
-    if (now - val.createdAt > 7 * 24 * 60 * 60 * 1000) {
-      delete paymentReceipts[orderId];
-      if (orders[orderId]) orders[orderId].paymentFileId = null;
-    }
-  });
-}
+// ========== اکسپورت ==========
 
-// --- export ---
 module.exports = {
   gems,
+  orders,
+  paymentReceipts,
   ADMINS,
   adminGemState,
+  getGemInlineKeyboard,
   startGemShop,
   handleGemSelect,
   handleGemContinue,
   handleGemUserData,
   handleGemPayment,
   handleAdminAction,
+  cleanOldReceipts,
   showGemAdminPanel,
   handleGemAdminAdd,
   handleGemAdminText,
@@ -255,6 +275,5 @@ module.exports = {
   handleGemAdminDelete,
   handleGemAdminEdit,
   handleGemAdminEditAskPrice,
-  handleGemAdminEditSetPrice,
-  cleanOldReceipts
+  handleGemAdminEditSetPrice
 };
