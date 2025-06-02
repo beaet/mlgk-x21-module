@@ -947,7 +947,6 @@ if (data.startsWith('gem_done_') || data.startsWith('gem_cancel_')) {
   }
 
   // مدیریت callback های دیگر (خرید جم، ادامه خرید و غیره)
-}
 
 if (data.startsWith('gem_')) {
   await handleGemCallback(query, bot, db, userStates, adminId);
