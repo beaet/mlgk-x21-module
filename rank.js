@@ -1,5 +1,6 @@
-const fs = require("fs");
-const { ref, get, update } = require("firebase/database");
+const { getDatabase, ref, get, update } = require("firebase/database");
+
+const db = global.db;
 
 const rankStages = ["Warrior", "Elite", "Master", "Grandmaster", "Epic", "Legend", "Mythic", "Mythical Honor", "Glorious Mythic", "Immortal"];
 const subRanks = {
@@ -20,7 +21,7 @@ const starsPerRank = {
   Mythic: 25,
   "Mythical Honor": 25,
   "Glorious Mythic": 50,
-  Immortal: null // دستی وارد میشه
+  Immortal: null
 };
 
 const userRankState = {};
@@ -119,6 +120,28 @@ function sendWinrateSelection(bot, chatId) {
   });
 }
 
+function calculateTotalStars(rank, sub, stars) {
+  let total = 0;
+  for (const stage of rankStages) {
+    if (stage === rank) {
+      const subs = subRanks[stage] || [];
+      if (subs.length) {
+        const index = subs.indexOf(sub);
+        const passedSubs = subs.length - index - 1;
+        total += passedSubs * starsPerRank.default;
+      }
+      break;
+    }
+    const subs = subRanks[stage];
+    if (subs.length) {
+      total += subs.length * starsPerRank.default;
+    } else {
+      total += starsPerRank[stage] || 0;
+    }
+  }
+  return total + stars;
+}
+
 function calculateWinsNeeded(current, target, winrate) {
   const neededStars = target - current;
   const wr = winrate / 100;
@@ -128,18 +151,19 @@ function calculateWinsNeeded(current, target, winrate) {
 
 async function finalizeRankCalc(bot, userId, isCustom) {
   const state = userRankState[userId];
-  const currentStars = state.currentStars;
-  const targetStars = state.targetStars;
   const wr = state.winrate || 50;
 
-  if (targetStars <= currentStars) {
+  const current = calculateTotalStars(state.currentStage, state.currentSub, state.currentStars);
+  const target = calculateTotalStars(state.targetStage, state.targetSub, state.targetStars);
+
+  if (target <= current) {
     delete userRankState[userId];
     return bot.sendMessage(userId, "⛔️ رنک هدف باید بالاتر از رنک فعلی باشد.");
   }
 
-  const result = calculateWinsNeeded(currentStars, targetStars, wr);
-
+  const result = calculateWinsNeeded(current, target, wr);
   const user = await getUser(userId);
+
   if (!user || (user.points || 0) < 1) {
     delete userRankState[userId];
     return bot.sendMessage(userId, "❌ امتیاز کافی برای استفاده از این قابلیت ندارید.");
