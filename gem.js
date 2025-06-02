@@ -40,6 +40,10 @@ async function handleBuyGemStep(userId, data, bot, db) {
   );
 }
 
+async function showGemAdminPanel(bot, chatId) {
+  // کد نمایش پنل ادمین اینجا
+}
+
 async function handleGemContinue(userId, bot, db, query) {
   const key = query.data.replace("gem_continue_", "");
   const snap = await get(ref(db, `gem_packages/${key}`));
