@@ -1355,7 +1355,7 @@ if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
 // ... ناحیه message handler بدون تغییر، فقط بخش stateهای جدید اضافه شود
 bot.on('message', async (msg) => {
   const userId = msg.from.id;
-  const state = userState[userId];
+  const state = userState[userId] || (userState[userId] = {});
   const text = msg.text || '';
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
