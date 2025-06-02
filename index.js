@@ -12,6 +12,7 @@ const startCooldown = new Map();
 const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
 const match = require('./match');
+const rank = require('./rank');
 const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = require('./pick');
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
@@ -241,6 +242,9 @@ function toolsMenuKeyboard() {
   return {
     reply_markup: {
       inline_keyboard: [
+        [
+                  { text: '🧮 ماشین حساب رنک', callback_data: 'rank_calculator' }
+        ],
         [
           { text: '📊 محاسبه ریت', callback_data: 'calculate_rate' },
           { text: '🏆 محاسبه برد و باخت', callback_data: 'calculate_wl' }
@@ -495,6 +499,19 @@ const now = Date.now();
   return bot.sendMessage(userId, 'لیست کاربران بلاک شده:', {
     reply_markup: { inline_keyboard: keyboard }
   });
+}
+
+// ⬇️ برای شروع ماشین‌حساب رنک
+if (data === 'rank_calculator') {
+  const user = await getUser(userId);
+  rank.userRankState[userId] = { user };
+  return rank.sendRankTypeSelection(bot, userId);
+}
+
+// ⬇️ مدیریت مراحل مختلف انتخاب
+if (data.startsWith('rank_')) {
+  await rank.handleRankCallback(bot, userId, data);
+  return;
 }
 
 // هندل آنبلاک کردن
@@ -1340,6 +1357,11 @@ bot.on('message', async (msg) => {
     await update(userRef(userId), { teammate_profile: state.teammateProfile });
     userState[userId] = null;
     return bot.sendMessage(userId, '✅ اطلاعات شما ذخیره شد! از دکمه پروفایل می‌تونی ببینی.');
+  }
+  
+    if (userState[userId]?.type === 'rank') {
+    await rank.handleImmortalInput(bot, userId, msg.text);
+    return;
   }
   
 if (!botActive && msg.from.id !== adminId) {
