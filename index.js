@@ -4,25 +4,16 @@ const express = require('express');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
 const userBusy = {};
+const state = {};
+gem.cleanOldReceipts();
 const userCooldown = {};
 const app = express();
-const userStates = {};
 const blockedUsers = {};
 const spamTracker = {};
 const startCooldown = new Map();
 const { startChallenge, handleAnswer } = require('./challenge');
-const {
-  showGemPackages,
-  handleBuyGemStep,
-  handleGemContinue,
-  handleGemCallback,
-  handleGemUserReply,
-  handlePhotoReceipt,
-  handleGemAdminAction,
-  showGemAdminPanel,
-  cleanupOldOrders
-} = require('./gem');
 const { sendNews } = require('./news');
+const gem = require('./gem');
 const match = require('./match');
 const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = require('./pick');
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
@@ -43,7 +34,6 @@ const MENU_BUTTONS = [
   { key: 'profile', label: '👤 پروفایل' },
   { key: 'squad_request', label: '➕ ثبت درخواست اسکواد' },
   { key: 'view_squads', label: '👥 مشاهده اسکوادها' },
-    { key: 'buy_gem', label: '💎 خرید جم' },
   { key: 'support', label: '💬پشتیبانی' },
   { key: 'help', label: '📚راهنما' },
   { key: 'buy', label: '💰خرید امتیاز' },
@@ -61,8 +51,7 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
 global.db = db; // بعد از تعریف db این خط را اضافه کن
-// پاک کردن سفارش‌های قدیمی‌تر از ۷ روز
-cleanupOldOrders(db);
+
 // ---- User Helper Functions ----
 const userRef = userId => ref(db, `users/${userId}`);
 async function ensureUser(user) {
@@ -228,10 +217,10 @@ function mainMenuKeyboard() {
           { text: '🕹 ابزار بازی', callback_data: 'tools_menu' }
         ],
         [
-                  { text: '💎 خرید جم', callback_data: 'buy_gem' }
+          { text: '🔮 چالش', callback_data: 'challenge' }
         ],
         [
-          { text: '🔮 چالش', callback_data: 'challenge' }
+                          { text: '💎 خرید جم', callback_data: 'buy_gem' }
         ],
         [
           { text: '🔗 دعوت دوستان', callback_data: 'referral' },
@@ -380,7 +369,7 @@ bot.onText(/\/panel/, async (msg) => {
           { text: '📢 پیام همگانی', callback_data: 'broadcast' }
         ],
         [
-                  { text: '🛠 مدیریت جم‌ها', callback_data: 'admin_gem_panel' }
+                          { text: '🛠 مدیریت دکمه‌های ربات', callback_data: 'gem_admin_panel' }
         ],
         [
           { text: '🚫بن کردن کاربر', callback_data: 'ban_user' },
@@ -518,6 +507,11 @@ const now = Date.now();
     reply_markup: { inline_keyboard: keyboard }
   });
 }
+
+  if (data === 'gem_admin_panel' && ADMINS.includes(userId)) {
+    require('./gem').showGemAdminPanel(bot, userId);
+    return;
+  }
 
 // هندل آنبلاک کردن
 if (data.startsWith('unblock_')) {
@@ -847,6 +841,28 @@ if (data === 'profile') {
   });
 }
 
+if (data === 'buy_gem') return gem.startGemShop(bot, userId, state);
+
+  // انتخاب یک بسته جم
+  if (data.startsWith('buy_gem_')) {
+    const gemId = data.replace('buy_gem_', '');
+    return gem.handleGemSelect(bot, userId, gemId, state);
+  }
+  
+  // ادامه خرید پس از نمایش قیمت
+  if (data === 'gem_continue') return gem.handleGemContinue(bot, userId, state);
+
+  // لغو خرید جم
+  if (data === 'cancel_gem') {
+    state[userId] = null;
+    return bot.sendMessage(userId, 'خرید جم لغو شد.');
+  }
+
+  // مدیریت سفارش توسط ادمین (تکمیل یا لغو)
+  if (data.startsWith('gem_done_') || data.startsWith('gem_cancel_')) {
+    return gem.handleAdminAction(bot, userId, data);
+  }
+
   // ---- لیست پیک/بن ----
   if (data === 'pickban_list') {
     await bot.answerCallbackQuery(query.id);
@@ -908,50 +924,6 @@ if (data === 'profile') {
     userState[userId] = null;
     return;
   }
-  
-  // دکمه نمایش بسته‌های جم
-if (data === 'buy_gem') {
-  await showGemPackages(userId, bot, db);
-  return;
-}
-
-// کلیک روی یکی از بسته‌های جم برای دیدن قیمت و ادامه
-if (data.startsWith('buy_gem_')) {
-  await handleBuyGemStep(userId, data, bot, db);
-  return;
-}
-
-// ادامه فرآیند خرید بعد از دیدن قیمت
-if (data.startsWith('gem_continue_')) {
-  await handleGemContinue(userId, bot, db, query);
-  return;
-}
-
-// مدیریت ادمین: تکمیل یا لغو سفارش
-if (data.startsWith('gem_done_') || data.startsWith('gem_cancel_')) {
-  await handleGemAdminAction(data, bot, db);
-  return;
-}
-
-// پنل مدیریت بسته‌های جم
-  // فقط ادمین اجازه داره
-  if (userId !== adminId) {
-    await bot.answerCallbackQuery(query.id, { text: "⚠️ دسترسی فقط برای ادمین است." });
-    return;
-  }
-
-  if (data === "admin_gem_panel") {
-    await bot.answerCallbackQuery(query.id);
-    await showGemAdminPanel(bot, userId, db);
-    return;
-  }
-
-  // مدیریت callback های دیگر (خرید جم، ادامه خرید و غیره)
-
-if (data.startsWith('gem_')) {
-  await handleGemCallback(query, bot, db, userStates, adminId);
-  return;
-}
 
   // ---- اسکواد: ثبت درخواست ----
   if (data === 'squad_request') {
@@ -1139,7 +1111,7 @@ if (data.startsWith('delete_approved_without_point_') && userId === adminId) {
   await bot.answerCallbackQuery(query.id, { text: '✅ اسکواد حذف شد بدون بازگشت امتیاز.', show_alert: true });
   return;
 }
-
+  
 
   // ---- اسکواد: تایید توسط ادمین ----
   if (data.startsWith('approve_squadreq_') && userId === adminId) {
@@ -1385,24 +1357,33 @@ bot.on('message', async (msg) => {
   const text = msg.text || '';
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
-  
-  // ارسال تصویر رسید توسط کاربر
-if (msg.photo && userStates[msg.from.id]?.step === "receipt") {
-  await handlePhotoReceipt(msg, bot, db);
-  return;
-}
-
-// مراحل پر کردن فرم خرید جم
-if (userStates[msg.from.id]?.type === "gem") {
-  await handleGemUserReply(msg.from.id, msg.text, bot, db);
-  return;
-}
 
   if (state && state.step === 'ask_rank') {
     state.teammateProfile.rank = text;
     state.step = 'ask_mainHero';
     return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
   }
+  
+  // دریافت اطلاعات کاربر مرحله به مرحله
+  if (msg.text && state[userId] && state[userId].step && state[userId].step.startsWith('gem_')) {
+    return gem.handleGemUserData(bot, msg, state);
+  }
+  
+if (ADMINS.includes(msg.from.id) && require('./gem').adminGemState[msg.from.id]) {
+  const adminState = require('./gem').adminGemState[msg.from.id];
+
+  if (adminState.step === 'edit_gem_price') {
+    return require('./gem').handleGemAdminEditSetPrice(bot, msg.from.id, msg, require('./gem').adminGemState);
+  } else {
+    return require('./gem').handleGemAdminText(bot, msg);
+  }
+}
+
+  // دریافت عکس رسید پرداخت
+  if (msg.photo && state[userId] && state[userId].step === 'gem_payment') {
+    return gem.handleGemPayment(bot, msg, state);
+  }
+  
   if (state && state.step === 'ask_mainHero') {
     state.teammateProfile.mainHero = text;
     state.step = 'ask_mainRole';
