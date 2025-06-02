@@ -1,5 +1,5 @@
-const fs = require("fs");
-const { get, set, ref } = require("firebase/database");
+const fs = require('fs');
+const { getDatabase, ref, get, set } = require('firebase-admin/database');
 
 const heroes = JSON.parse(fs.readFileSync("./heroes.json", "utf8"));
 
