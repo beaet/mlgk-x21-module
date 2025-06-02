@@ -1,7 +1,7 @@
 // rank.js
 
-const { ref, get, update } = require("firebase/database");
-const { userRef, getUser } = require("./user");
+const fs = require("fs");
+const { ref, get, userRef, getUser, update } = require("firebase/database");
 
 const rankStages = ["Warrior", "Elite", "Master", "Grandmaster", "Epic", "Legend", "Mythic", "Mythical Honor", "Glorious Mythic", "Immortal"];
 
