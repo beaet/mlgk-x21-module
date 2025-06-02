@@ -16,7 +16,6 @@ const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = requ
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
 const adminId = Number(process.env.ADMIN_ID);
-const webhookUrl = process.env.WEBHOOK_URL;
 const port = process.env.PORT || 10000;
 let botActive = true
 const MENU_BUTTONS = [
@@ -101,6 +100,15 @@ async function getAllUsersFromDatabase() {
     });
   });
 }
+
+(async () => {
+  try {
+    const res = await axios.get(`${TELEGRAM_API}/deleteWebhook`);
+    console.log('✅ Webhook حذف شد:', res.data);
+  } catch (err) {
+    console.error('❌ خطا در حذف Webhook:', err.response?.data || err.message);
+  }
+})();
 
 
 // ---- Gift Code helpers ----
@@ -194,8 +202,7 @@ const supportChatMap = {};
   await fetchBotActiveStatus();
   // اینجا بقیه کدهای bot و express را بنویس
   // مثلاً:
-  const bot = new TelegramBot(token, { polling: false });
-    bot.setWebHook(`${webhookUrl}/bot${token}`);
+  const bot = new TelegramBot(token, { polling: true });
   
   app.use(express.json());
   app.post(`/bot${token}`, (req, res) => {
