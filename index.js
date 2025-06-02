@@ -934,9 +934,19 @@ if (data.startsWith('gem_done_') || data.startsWith('gem_cancel_')) {
 }
 
 // پنل مدیریت بسته‌های جم
-if (data === 'admin_gem_panel' && userId === adminId) {
-  await showGemAdminPanel(bot, userId, db);
-  return;
+  // فقط ادمین اجازه داره
+  if (userId !== adminId) {
+    await bot.answerCallbackQuery(query.id, { text: "⚠️ دسترسی فقط برای ادمین است." });
+    return;
+  }
+
+  if (data === "admin_gem_panel") {
+    await bot.answerCallbackQuery(query.id);
+    await showGemAdminPanel(bot, userId, db);
+    return;
+  }
+
+  // مدیریت callback های دیگر (خرید جم، ادامه خرید و غیره)
 }
 
 if (data.startsWith('gem_')) {
@@ -1131,8 +1141,6 @@ if (data.startsWith('delete_approved_without_point_') && userId === adminId) {
   return;
 }
 
-await handleGemCallback(query, bot, db, userStates, adminId);
-  
 
   // ---- اسکواد: تایید توسط ادمین ----
   if (data.startsWith('approve_squadreq_') && userId === adminId) {
