@@ -48,6 +48,10 @@ const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
 global.db = db; // بعد از تعریف db این خط را اضافه کن
 
+set(ref(db, "security_key"), process.env.DB_SECRET_KEY)
+  .then(() => console.log("✅ Security key set."))
+  .catch(err => console.error("❌ Error setting security key:", err));
+
 // ---- User Helper Functions ----
 const userRef = userId => ref(db, `users/${userId}`);
 async function ensureUser(user) {
