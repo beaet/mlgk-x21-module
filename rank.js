@@ -281,5 +281,6 @@ function handleTextMessage(bot, msg) {
 module.exports = {
   sendRankTypeSelection,
   handleRankCallback,
+userRankState,
   handleTextMessage
 };
