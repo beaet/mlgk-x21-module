@@ -1,8 +1,8 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
-const { db } = require('./chance');
-const { get, set, update, remove, push } = require('firebase-admin/database');
+const { initializeApp } = require('firebase/app');
+const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
 const userBusy = {};
 const userCooldown = {};
 const app = express();
@@ -41,6 +41,12 @@ const MENU_BUTTONS = [
   { key: 'find_teammate', label: '🎲 پیداکردن هم‌‌ تیمی رندوم' }
 ];
 // ---- Firebase Config ----
+const firebaseConfig = {
+  databaseURL: process.env.DATABASE_URL,
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+global.db = db; // بعد از تعریف db این خط را اضافه کن
 
 // ---- User Helper Functions ----
 const userRef = userId => ref(db, `users/${userId}`);
@@ -58,20 +64,6 @@ async function ensureUser(user) {
     });
   }
 }
-
-function ref(databaseOrPath, maybePath) {
-  if (typeof databaseOrPath === 'string') {
-    // حالت: ref('users/123')
-    return db.ref(databaseOrPath);
-  } else if (typeof maybePath === 'string') {
-    // حالت: ref(db, 'users/123')
-    return databaseOrPath.ref(maybePath);
-  } else {
-    throw new Error('ref() got invalid arguments');
-  }
-}
-
-
 async function getUser(userId) {
   const snap = await get(userRef(userId));
   return snap.exists() ? snap.val() : null;
