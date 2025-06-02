@@ -1367,9 +1367,9 @@ bot.on('message', async (msg) => {
   }
   
   // دریافت اطلاعات کاربر مرحله به مرحله
-  if (msg.text && state[userId] && state[userId].step && state[userId].step.startsWith('gem_')) {
-    return gem.handleGemUserData(bot, msg, state);
-  }
+if (msg.text && state[userId]?.step?.startsWith('gem_')) {
+  return gem.handleGemUserData(bot, msg, state);
+}
   
 if (ADMINS.includes(msg.from.id) && require('./gem').adminGemState[msg.from.id]) {
   const adminState = require('./gem').adminGemState[msg.from.id];
