@@ -1386,12 +1386,12 @@ bot.on('message', async (msg) => {
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
 
-  console.log('userId:', userId);
-  console.log('state:', state);
-
 // اطمینان از وجود state برای هر کاربر
   if (!userState[userId]) userState[userId] = {};
   const state = userState[userId];
+
+  console.log('userId:', userId);
+  console.log('state:', state);
 
   // مراحل ثبت سفارش جم (حالت متنی)
   if (msg.text && state.step && state.step.startsWith('gem_')) {
