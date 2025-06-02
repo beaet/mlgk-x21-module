@@ -1,13 +1,18 @@
 // rank.js
 
 const fs = require("fs");
-const { ref, get, userRef, getUser, update } = require("firebase/database");
-const { getDatabase } = require('firebase-admin/database');
-const db = getDatabase();
+const { ref, get, update } = require("firebase/database");
 
 async function getUser(userId) {
-  const snapshot = await db.ref(`users/${userId}`).once('value');
-  return snapshot.exists() ? snapshot.val() : null;
+  const db = getDatabase();
+  const userSnapshot = await get(ref(db, `users/${userId}`));
+  return userSnapshot.exists() ? userSnapshot.val() : null;
+}
+
+// گرفتن رفرنس به کاربر
+function userRef(userId) {
+  const db = getDatabase();
+  return ref(db, `users/${userId}`);
 }
 
 const rankStages = ["Warrior", "Elite", "Master", "Grandmaster", "Epic", "Legend", "Mythic", "Mythical Honor", "Glorious Mythic", "Immortal"];
@@ -237,6 +242,8 @@ module.exports = {
   sendRankTypeSelection,
   sendRankSelection,
   sendSubRanks,
+  getUser,
+  userRef,
   sendStarSelection,
   sendWinrateSelection,
   finalizeRankCalc,
