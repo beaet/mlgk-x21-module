@@ -243,11 +243,11 @@ function toolsMenuKeyboard() {
     reply_markup: {
       inline_keyboard: [
         [
-                  { text: '🧮 ماشین حساب رنک', callback_data: 'rank_calculator' }
-        ],
-        [
           { text: '📊 محاسبه ریت', callback_data: 'calculate_rate' },
           { text: '🏆 محاسبه برد و باخت', callback_data: 'calculate_wl' }
+        ],
+        [
+                  { text: '🧮 ماشین حساب رنک', callback_data: 'rank_calculator' }
         ],
         [
           { text: '⚔ هیرو کانتر', callback_data: 'hero_counter' },
