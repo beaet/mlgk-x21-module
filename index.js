@@ -1358,6 +1358,7 @@ bot.on('message', async (msg) => {
   const text = msg.text || '';
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
+  const ADMINS = [adminId];
 
   if (!userState[userId]) {
     userState[userId] = {};
