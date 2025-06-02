@@ -2,6 +2,13 @@
 
 const fs = require("fs");
 const { ref, get, userRef, getUser, update } = require("firebase/database");
+const { getDatabase } = require('firebase-admin/database');
+const db = getDatabase();
+
+async function getUser(userId) {
+  const snapshot = await db.ref(`users/${userId}`).once('value');
+  return snapshot.exists() ? snapshot.val() : null;
+}
 
 const rankStages = ["Warrior", "Elite", "Master", "Grandmaster", "Epic", "Legend", "Mythic", "Mythical Honor", "Glorious Mythic", "Immortal"];
 
