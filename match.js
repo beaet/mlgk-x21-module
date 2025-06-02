@@ -1,5 +1,5 @@
 // match.js
-const { ref, update, get } = require('firebase/database');
+const { getDatabase, ref, update, get } = require('firebase-admin/database');
 
 const teammateQueue = {
   ranked: [],
