@@ -218,7 +218,7 @@ module.exports = {
   showGemPackages,
   handleBuyGemStep,
   handleGemContinue,
-  handleGemCallback, // این حتماً باید باشه
+  handleGemCallback,
   handleGemUserReply,
   handlePhotoReceipt,
   handleGemAdminAction,
