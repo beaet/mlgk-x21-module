@@ -1,8 +1,8 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
-const { initializeApp } = require('firebase/app');
-const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
+const { db } = require('./chance');
+const { ref, get, set, update, remove, push } = require('firebase-admin/database');
 const userBusy = {};
 const userCooldown = {};
 const app = express();
@@ -41,12 +41,6 @@ const MENU_BUTTONS = [
   { key: 'find_teammate', label: '🎲 پیداکردن هم‌‌ تیمی رندوم' }
 ];
 // ---- Firebase Config ----
-const firebaseConfig = {
-  databaseURL: process.env.DATABASE_URL,
-};
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getDatabase(firebaseApp);
-global.db = db; // بعد از تعریف db این خط را اضافه کن
 
 // ---- User Helper Functions ----
 const userRef = userId => ref(db, `users/${userId}`);
@@ -100,15 +94,6 @@ async function getAllUsersFromDatabase() {
     });
   });
 }
-
-(async () => {
-  try {
-    const res = await axios.get(`${TELEGRAM_API}/deleteWebhook`);
-    console.log('✅ Webhook حذف شد:', res.data);
-  } catch (err) {
-    console.error('❌ خطا در حذف Webhook:', err.response?.data || err.message);
-  }
-})();
 
 
 // ---- Gift Code helpers ----
