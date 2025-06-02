@@ -16,6 +16,7 @@ const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = requ
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
 const adminId = Number(process.env.ADMIN_ID);
+const webhookUrl = process.env.WEBHOOK_URL;
 const port = process.env.PORT || 10000;
 let botActive = true
 const MENU_BUTTONS = [
@@ -197,8 +198,8 @@ const supportChatMap = {};
   await fetchBotActiveStatus();
   // اینجا بقیه کدهای bot و express را بنویس
   // مثلاً:
-  const bot = new TelegramBot(token, { polling: true });
-  await bot.deleteWebHook();
+  const bot = new TelegramBot(token);
+bot.setWebHook(`${YOUR_PUBLIC_URL}/bot${token}`);
   
 // ---- Main Menu ----
 function mainMenuKeyboard() {
