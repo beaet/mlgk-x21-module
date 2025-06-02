@@ -5,7 +5,6 @@ const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
 const userBusy = {};
 const state = {};
-gem.cleanOldReceipts();
 const userCooldown = {};
 const app = express();
 const blockedUsers = {};
@@ -13,8 +12,10 @@ const spamTracker = {};
 const startCooldown = new Map();
 const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
-const gem = require('./gem');
-gem.cleanOldReceipts();
+
+const gem = require('./gem');  // ابتدا تعریف می‌کنیم
+gem.cleanOldReceipts();        // بعد استفاده می‌کنیم
+
 const match = require('./match');
 const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = require('./pick');
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
