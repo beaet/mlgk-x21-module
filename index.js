@@ -1355,24 +1355,28 @@ if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
 // ... ناحیه message handler بدون تغییر، فقط بخش stateهای جدید اضافه شود
 bot.on('message', async (msg) => {
   const userId = msg.from.id;
-  const state = userState[userId] || (userState[userId] = {});
   const text = msg.text || '';
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
+
+  if (!userState[userId]) {
+    userState[userId] = {};
+  }
+  const state = userState[userId];
 
   if (state && state.step === 'ask_rank') {
     state.teammateProfile.rank = text;
     state.step = 'ask_mainHero';
     return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
   }
-  
+
   console.log('userId:', userId);
-console.log('state:', state);
-  
+  console.log('state:', state);
+
   // دریافت اطلاعات کاربر مرحله به مرحله
-if (msg.text && state[userId]?.step?.startsWith('gem_')) {
-  return gem.handleGemUserData(bot, msg, state);
-}
+  if (msg.text && state?.step?.startsWith('gem_')) {
+    return gem.handleGemUserData(bot, msg, state);
+  }
   
 if (ADMINS.includes(msg.from.id) && require('./gem').adminGemState[msg.from.id]) {
   const adminState = require('./gem').adminGemState[msg.from.id];
