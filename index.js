@@ -21,6 +21,7 @@ const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = requ
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
 const adminId = Number(process.env.ADMIN_ID);
+const ADMINS = [adminId];
 const webhookUrl = process.env.WEBHOOK_URL;
 const port = process.env.PORT || 10000;
 let botActive = true
@@ -1358,7 +1359,6 @@ bot.on('message', async (msg) => {
   const text = msg.text || '';
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
-  const ADMINS = [adminId];
 
   if (!userState[userId]) {
     userState[userId] = {};
