@@ -1366,6 +1366,9 @@ bot.on('message', async (msg) => {
     return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
   }
   
+  console.log('userId:', userId);
+console.log('state:', state);
+  
   // دریافت اطلاعات کاربر مرحله به مرحله
 if (msg.text && state[userId]?.step?.startsWith('gem_')) {
   return gem.handleGemUserData(bot, msg, state);
