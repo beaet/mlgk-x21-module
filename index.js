@@ -3,7 +3,6 @@ const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const { db } = require('./chance');
 const { get, set, update, remove, push } = require('firebase-admin/database');
-const ref = path => db.ref(path);
 const userBusy = {};
 const userCooldown = {};
 const app = express();
@@ -59,6 +58,20 @@ async function ensureUser(user) {
     });
   }
 }
+
+function ref(databaseOrPath, maybePath) {
+  if (typeof databaseOrPath === 'string') {
+    // حالت: ref('users/123')
+    return db.ref(databaseOrPath);
+  } else if (typeof maybePath === 'string') {
+    // حالت: ref(db, 'users/123')
+    return databaseOrPath.ref(maybePath);
+  } else {
+    throw new Error('ref() got invalid arguments');
+  }
+}
+
+
 async function getUser(userId) {
   const snap = await get(userRef(userId));
   return snap.exists() ? snap.val() : null;
