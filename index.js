@@ -198,12 +198,8 @@ const supportChatMap = {};
   // اینجا بقیه کدهای bot و express را بنویس
   // مثلاً:
   const bot = new TelegramBot(token, { polling: true });
+  await bot.deleteWebHook();
   
-  app.use(express.json());
-  app.post(`/bot${token}`, (req, res) => {
-    bot.processUpdate(req.body);
-    res.sendStatus(200);
-  });
 // ---- Main Menu ----
 function mainMenuKeyboard() {
   return {
