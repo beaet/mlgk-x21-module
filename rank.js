@@ -72,7 +72,7 @@ function sendRankSelection(bot, chatId, stage = "start") {
 function sendSubRanks(bot, chatId, rank) {
   const subs = subRanks[rank] || [];
   if (!subs.length) {
-    userRankState[chatId].currentSub = null;
+    userRankState[chatId].currentSub ??= null;
     return sendStarSelection(bot, chatId, rank);
   }
   const buttons = subs.map(s => [
@@ -145,6 +145,87 @@ async function finalizeRankCalc(bot, userId, isCustom) {
   delete userRankState[userId];
 }
 
+async function handleRankCallback(bot, userId, data) {
+  if (!userRankState[userId]) {
+    userRankState[userId] = {};
+  }
+
+  const state = userRankState[userId];
+
+  if (data === "rank_calc_basic") {
+    state.type = "basic";
+    sendRankSelection(bot, userId, "start");
+
+  } else if (data === "rank_calc_customwin") {
+    state.type = "custom";
+    sendRankSelection(bot, userId, "start");
+
+  } else if (data.startsWith("rank_stage_")) {
+    const rank = data.replace("rank_stage_", "").replace(/_/g, " ");
+    if (!state.currentStage) {
+      state.currentStage = rank;
+      sendSubRanks(bot, userId, rank);
+    } else {
+      state.targetStage = rank;
+      sendSubRanks(bot, userId, rank);
+    }
+
+  } else if (data.startsWith("rank_sub_")) {
+    const sub = data.replace("rank_sub_", "");
+    if (!state.currentSub) {
+      state.currentSub = sub;
+      sendStarSelection(bot, userId, state.currentStage);
+    } else {
+      state.targetSub = sub;
+      sendStarSelection(bot, userId, state.targetStage);
+    }
+
+  } else if (data.startsWith("rank_star_")) {
+    const star = parseInt(data.replace("rank_star_", ""));
+    if (!state.currentStars) {
+      state.currentStars = star;
+      sendRankSelection(bot, userId, "target");
+    } else {
+      state.targetStars = star;
+      if (state.type === "custom") {
+        sendWinrateSelection(bot, userId);
+      } else {
+        finalizeRankCalc(bot, userId, false);
+      }
+    }
+
+  } else if (data.startsWith("rank_winrate_")) {
+    const wr = parseInt(data.replace("rank_winrate_", ""));
+    state.winrate = wr;
+    finalizeRankCalc(bot, userId, true);
+  }
+}
+
+function handleTextMessage(bot, msg) {
+  const chatId = msg.chat.id;
+  const state = userRankState[chatId];
+  if (!state || !state.awaitingImmortalInput) return;
+
+  const value = parseInt(msg.text);
+  if (isNaN(value) || value < 1 || value > 1000) {
+    return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر وارد کنید (مثلاً 12).");
+  }
+
+  delete state.awaitingImmortalInput;
+
+  if (!state.currentStars) {
+    state.currentStars = value;
+    sendRankSelection(bot, chatId, "target");
+  } else {
+    state.targetStars = value;
+    if (state.type === "custom") {
+      sendWinrateSelection(bot, chatId);
+    } else {
+      finalizeRankCalc(bot, chatId, false);
+    }
+  }
+}
+
 module.exports = {
   sendRankTypeSelection,
   sendRankSelection,
@@ -152,5 +233,7 @@ module.exports = {
   sendStarSelection,
   sendWinrateSelection,
   finalizeRankCalc,
+  handleRankCallback,
+  handleTextMessage,
   userRankState
 };
