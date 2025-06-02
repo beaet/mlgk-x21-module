@@ -1,5 +1,5 @@
-const { ref, get, update } = require('firebase-admin/database');
-const { db } = require('./chance');
+const fs = require("fs");
+const { ref, get, update } = require("firebase/database");
 
 const rankStages = ["Warrior", "Elite", "Master", "Grandmaster", "Epic", "Legend", "Mythic", "Mythical Honor", "Glorious Mythic", "Immortal"];
 const subRanks = {
