@@ -199,7 +199,13 @@ const supportChatMap = {};
   // اینجا بقیه کدهای bot و express را بنویس
   // مثلاً:
   const bot = new TelegramBot(token);
-bot.setWebHook(`${YOUR_PUBLIC_URL}/bot${token}`);
+bot.setWebHook(`${webhookUrl}/bot${token}`);
+
+  app.use(express.json());
+  app.post(`/bot${token}`, (req, res) => {
+    bot.processUpdate(req.body);
+    res.sendStatus(200);
+  });
   
 // ---- Main Menu ----
 function mainMenuKeyboard() {
