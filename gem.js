@@ -53,6 +53,10 @@ async function handleGemContinue(userId, bot, db, query) {
   await bot.sendMessage(userId, "📝 لطفاً نام و نام خانوادگی خود را وارد کنید:");
 }
 
+async function handleGemCallback(query, bot, db, userStates, adminId) {
+  // کدهای مربوط به مدیریت callbackها اینجا
+}
+
 async function handleGemUserReply(userId, text, bot, db) {
   const state = userStates[userId];
   if (!state || state.type !== "gem") return;
@@ -218,7 +222,7 @@ module.exports = {
   showGemPackages,
   handleBuyGemStep,
   handleGemContinue,
-  handleGemCallback,
+  handleGemCallback, // این حتماً باید باشه
   handleGemUserReply,
   handlePhotoReceipt,
   handleGemAdminAction,
