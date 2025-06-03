@@ -1,28 +1,21 @@
 // rank.js
+
 const { ref, get, update } = require("firebase/database");
 
-// ----- تنظیمات رنک -----
-const rankStages = [
-  "Warrior", "Elite", "Master", "Grandmaster",
-  "Epic", "Legend", "Mythic", "Mythical Honor", "Glorious Mythic", "Immortal"
+// ----- ساختار رنک و ستاره -----
+const allRanks = [
+  {name: "Warrior", sub: ["III", "II", "I"], stars: 5},
+  {name: "Elite", sub: ["III", "II", "I"], stars: 5},
+  {name: "Master", sub: ["III", "II", "I"], stars: 5},
+  {name: "Grandmaster", sub: ["III", "II", "I"], stars: 5},
+  {name: "Epic", sub: ["IV", "III", "II", "I"], stars: 5},
+  {name: "Legend", sub: ["IV", "III", "II", "I"], stars: 5},
+  {name: "Mythic", sub: [], stars: 24},
+  {name: "Mythical Honor", sub: [], stars: 25},
+  {name: "Glorious Mythic", sub: [], stars: 50},
+  {name: "Immortal", sub: [], stars: null} // فقط دستی
 ];
-const subRanks = {
-  Warrior: ["III", "II", "I"],
-  Elite: ["III", "II", "I"],
-  Master: ["III", "II", "I"],
-  Grandmaster: ["III", "II", "I"],
-  Epic: ["IV", "III", "II", "I"],
-  Legend: ["IV", "III", "II", "I"],
-  Mythic: [],
-  "Mythical Honor": [],
-  "Glorious Mythic": [],
-  Immortal: []
-};
-const starsPerRank = {
-  default: 5,
-  Epic: 5,
-  Legend: 5
-};
+
 const userRankState = {};
 const userCooldowns = {};
 
@@ -71,17 +64,17 @@ function sendRankTypeSelection(bot, chatId) {
 }
 function sendRankSelection(bot, chatId, step = "start") {
   const rows = [];
-  for (let i = 0; i < rankStages.length; i += 2) {
+  for (let i = 0; i < allRanks.length; i += 2) {
     const row = [
       {
-        text: rankStages[i],
-        callback_data: `rank_stage_${rankStages[i].replace(/ /g, "_")}`
+        text: allRanks[i].name,
+        callback_data: `rank_stage_${allRanks[i].name.replace(/ /g, "_")}`
       }
     ];
-    if (rankStages[i + 1]) {
+    if (allRanks[i + 1]) {
       row.push({
-        text: rankStages[i + 1],
-        callback_data: `rank_stage_${rankStages[i + 1].replace(/ /g, "_")}`
+        text: allRanks[i + 1].name,
+        callback_data: `rank_stage_${allRanks[i + 1].name.replace(/ /g, "_")}`
       });
     }
     rows.push(row);
@@ -93,7 +86,8 @@ function sendRankSelection(bot, chatId, step = "start") {
   );
 }
 function sendSubRanks(bot, chatId, rank) {
-  const subs = subRanks[rank] || [];
+  const found = allRanks.find(r => r.name === rank);
+  const subs = found ? found.sub : [];
   if (!subs.length) {
     if (!userRankState[chatId].currentSub) {
       userRankState[chatId].currentSub = null;
@@ -110,31 +104,17 @@ function sendSubRanks(bot, chatId, rank) {
   });
 }
 function sendStarSelection(bot, chatId, rank, step = "current") {
-  // Mythic/Mythical Honor/Glorious Mythic/Immortal
+  const found = allRanks.find(r => r.name === rank);
+  let minStars = 1, maxStars = (found && found.stars) ? found.stars : 5;
   if (rank === "Immortal") {
     bot.sendMessage(chatId, "🔢 تعداد ستاره‌های رنک Immortal را وارد کنید (مثلاً 12):");
     userRankState[chatId][step === "current" ? "awaitingImmortalInput" : "awaitingImmortalTarget"] = true;
     return;
   }
-  if (rank === "Mythic") {
-    bot.sendMessage(chatId, "🔢 تعداد ستاره‌های Mythic را بین 1 تا 24 وارد کنید:");
-    userRankState[chatId][step === "current" ? "awaitingMythicInput" : "awaitingMythicTarget"] = true;
-    return;
-  }
-  if (rank === "Mythical Honor") {
-    bot.sendMessage(chatId, "🔢 تعداد ستاره‌های Mythical Honor را بین 25 تا 49 وارد کنید:");
-    userRankState[chatId][step === "current" ? "awaitingMythicHonorInput" : "awaitingMythicHonorTarget"] = true;
-    return;
-  }
-  if (rank === "Glorious Mythic") {
-    bot.sendMessage(chatId, "🔢 تعداد ستاره‌های Glorious Mythic را بین 50 تا 99 وارد کنید:");
-    userRankState[chatId][step === "current" ? "awaitingGloriousInput" : "awaitingGloriousTarget"] = true;
-    return;
-  }
-  // Warrior تا Legend
-  const maxStars = starsPerRank[rank] || starsPerRank.default;
-  const buttons = [];
-  for (let i = 1; i <= maxStars; i++) {
+  // Mythic و Honor و Glorious هم باید دکمه‌ شیشه‌ای بین بازه مربوطه داشته باشد
+  if (rank === "Mythic")      { minStars = 1;  maxStars = 24; }
+  if (rank === "Mythical Honor") { minStars = 25; maxStars = 49; }
+; i <= maxStars; i++) {
     buttons.push([{ text: `${i}⭐`, callback_data: `rank_star_${i}` }]);
   }
   bot.sendMessage(chatId, `⭐️ تعداد ستاره‌های ${rank} خود را انتخاب کنید:`, {
@@ -151,47 +131,47 @@ function sendWinrateSelection(bot, chatId) {
   });
 }
 
-// ----- الگوریتم دقیق محاسبه استار -----
-function getAbsoluteStarIndex(rank, sub, star) {
-  // Mythic به بالا
-  if (rank === "Mythic") return star;
-  if (rank === "Mythical Honor") return 24 + star;
-  if (rank === "Glorious Mythic") return 49 + star;
-  if (rank === "Immortal") return star + 99; // فرض: ایمورتال پس از گلوریوس
-  // Warrior تا Legend
+// ---- تبدیل هر نقطه به شماره ستاره مطلق ----
+function getAbsoluteStarNum(rankName, sub, star) {
   let total = 0;
-  for (let rk of rankStages) {
-    if (rk === "Mythic") break;
-    let subRanksList = subRanks[rk] || [null];
-    for (let sr of subRanksList) {
-      let end = (rk === rank && sr === sub) ? star : starsPerRank.default;
-      total += end;
-      if (rk === rank && sr === sub) return total;
+  for (const rank of allRanks) {
+    if (rank.name === rankName) {
+      if (rank.sub.length) {
+        const subIdx = rank.sub.indexOf(sub);
+        total += subIdx * rank.stars + star;
+      } else {
+        total += star;
+      }
+      break;
+    } else {
+      if (rank.sub.length) {
+        total += rank.sub.length * rank.stars;
+      } else if (rank.stars) {
+        total += rank.stars;
+      }
     }
   }
   return total;
 }
 function getStarDistance(startRank, startSub, startStar, endRank, endSub, endStar) {
-  let startIdx = getAbsoluteStarIndex(startRank, startSub, startStar);
-  let endIdx = getAbsoluteStarIndex(endRank, endSub, endStar);
+  let startIdx = getAbsoluteStarNum(startRank, startSub, startStar);
+  let endIdx = getAbsoluteStarNum(endRank, endSub, endStar);
   return endIdx - startIdx;
 }
-function calculateWinsNeeded(stars, winrate) {
-  const wr = winrate / 100;
+function calculateWins100;
   const gamesNeeded = Math.ceil(stars / wr);
   return { neededStars: stars, gamesNeeded };
 }
 
-// ----- finalize & کم کردن امتیاز -----
+// ---- finalize & کم کردن امتیاز ----
 async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point") {
   const state = userRankState[userId];
   const {
     currentStage, currentSub, currentStars,
     targetStage, targetSub, targetStars, winrate
   } = state;
-  // شمارش ستاره دقیق
-  const cs = getAbsoluteStarIndex(currentStage, currentSub, currentStars);
-  const ts = getAbsoluteStarIndex(targetStage, targetSub, targetStars);
+  const cs = getAbsoluteStarNum(currentStage, currentSub, currentStars);
+  const ts = getAbsoluteStarNum(targetStage, targetSub, targetStars);
   if (ts <= cs) {
     delete userRankState[userId];
     return bot.sendMessage(userId, "⛔️ رنک هدف باید بالاتر از رنک فعلی باشد.");
@@ -201,7 +181,6 @@ async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point") {
   const daysNormal = Math.ceil(result.gamesNeeded / 5);
   const daysPerfect = Math.ceil(result.neededStars / 5);
 
-  // کم کردن امتیاز فقط اگر حالت "point" باشد
   let msgPoint = "";
   if (adminMode === "point") {
     const user = await getUser(userId);
@@ -214,7 +193,6 @@ async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point") {
     msgPoint = `\n✅ یک امتیاز از حساب شما کسر شد. امتیاز فعلی: ${userPoints - 1}`;
   }
 
-  // نتیجه
   const msg = `📊 نتیجه محاسبه:
 ✅ فاصله تا رنک هدف: ${result.neededStars} ستاره
 🎯 تعداد بازی مورد نیاز با وین‌ریت ${wr}%: ${result.gamesNeeded} بازی
@@ -224,7 +202,7 @@ async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point") {
   delete userRankState[userId];
 }
 
-// ----- هندل دکمه -----
+// ---- هندل دکمه ----
 async function handleRankCallback(bot, userId, data, callbackQuery, adminMode = "point") {
   if (checkSpam(userId, callbackQuery, bot)) return;
   closeInline(bot, callbackQuery);
@@ -292,17 +270,17 @@ async function handleRankCallback(bot, userId, data, callbackQuery, adminMode = 
   }
 }
 
-// ----- هندل پیام متنی ستاره ویژه -----
+// ---- هندل پیام متنی ایمورتال ----
 function handleTextMessage(bot, msg, adminMode = "point") {
   const chatId = msg.chat.id;
   const state = userRankState[chatId];
   if (!state) return;
 
-  // Immortal
+  // Immortal فقط دستی
   if (state.awaitingImmortalInput) {
     const value = parseInt(msg.text);
     if (isNaN(value) || value < 1 || value > 999) {
-      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر وارد کنید (مثلاً 12).");
+      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
     }
     delete state.awaitingImmortalInput;
     if (!state.currentStars) {
@@ -322,7 +300,7 @@ function handleTextMessage(bot, msg, adminMode = "point") {
   if (state.awaitingImmortalTarget) {
     const value = parseInt(msg.text);
     if (isNaN(value) || value < 1 || value > 999) {
-      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر وارد کنید (مثلاً 12).");
+      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
     }
     delete state.awaitingImmortalTarget;
     state.targetStars = value;
@@ -333,108 +311,12 @@ function handleTextMessage(bot, msg, adminMode = "point") {
     }
     return;
   }
-
-  // Mythic
-  if (state.awaitingMythicInput) {
-    const value = parseInt(msg.text);
-    if (value < 1 || value > 24) return bot.sendMessage(chatId, "❌ مقدار باید بین 1 تا 24 باشد.");
-    delete state.awaitingMythicInput;
-    if (!state.currentStars) {
-      state.currentStars = value;
-      state.step = "targetRank";
-      sendRankSelection(bot, chatId, "target");
-    } else {
-      state.targetStars = value;
-      if (state.type === "custom") {
-        sendWinrateSelection(bot, chatId);
-      } else {
-        finalizeRankCalc(bot, chatId, false, adminMode);
-      }
-    }
-    return;
-  }
-  if (state.awaitingMythicTarget) {
-    const value = parseInt(msg.text);
-    if (value < 1 || value > 24) return bot.sendMessage(chatId, "❌ مقدار باید بین 1 تا 24 باشد.");
-    delete state.awaitingMythicTarget;
-    state.targetStars = value;
-    if (state.type === "custom") {
-      sendWinrateSelection(bot, chatId);
-    } else {
-      finalizeRankCalc(bot, chatId, false, adminMode);
-    }
-    return;
-  }
-
-  // Mythical Honor
-  if (state.awaitingMythicHonorInput) {
-    const value = parseInt(msg.text);
-    if (value < 25 || value > 49) return bot.sendMessage(chatId, "❌ مقدار باید بین 25 تا 49 باشد.");
-    delete state.awaitingMythicHonorInput;
-    if (!state.currentStars) {
-      state.currentStars = value;
-      state.step = "targetRank";
-      sendRankSelection(bot, chatId, "target");
-    } else {
-      state.targetStars = value;
-      if (state.type === "custom") {
-        sendWinrateSelection(bot, chatId);
-      } else {
-        finalizeRankCalc(bot, chatId, false, adminMode);
-      }
-    }
-    return;
-  }
-  if (state.awaitingMythicHonorTarget) {
-    const value = parseInt(msg.text);
-    if (value < 25 || value > 49) return bot.sendMessage(chatId, "❌ مقدار باید بین 25 تا 49 باشد.");
-    delete state.awaitingMythicHonorTarget;
-    state.targetStars = value;
-    if (state.type === "custom") {
-      sendWinrateSelection(bot, chatId);
-    } else {
-      finalizeRankCalc(bot, chatId, false, adminMode);
-    }
-    return;
-  }
-
-  // Glorious Mythic
-  if (state.awaitingGloriousInput) {
-    const value = parseInt(msg.text);
-    if (value < 50 || value > 99) return bot.sendMessage(chatId, "❌ مقدار باید بین 50 تا 99 باشد.");
-    delete state.awaitingGloriousInput;
-    if (!state.currentStars) {
-      state.currentStars = value;
-      state.step = "targetRank";
-      sendRankSelection(bot, chatId, "target");
-    } else {
-      state.targetStars = value;
-      if (state.type === "custom") {
-        sendWinrateSelection(bot, chatId);
-      } else {
-        finalizeRankCalc(bot, chatId, false, adminMode);
-      }
-    }
-    return;
-  }
-  if (state.awaitingGloriousTarget) {
-    const value = parseInt(msg.text);
-    if (value < 50 || value > 99) return bot.sendMessage(chatId, "❌ مقدار باید بین 50 تا 99 باشد.");
-    delete state.awaitingGloriousTarget;
-    state.targetStars = value;
-    if (state.type === "custom") {
-      sendWinrateSelection(bot, chatId);
-    } else {
-      finalizeRankCalc(bot, chatId, false, adminMode);
-    }
-    return;
-  }
 }
 
-// ----- خروجی -----
+// ---- خروجی ----
 module.exports = {
   sendRankTypeSelection,
   handleRankCallback,
-  userRankState,
+userRankState,
   handleTextMessage
 };
