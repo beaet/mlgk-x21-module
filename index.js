@@ -4,6 +4,7 @@ const express = require('express');
 const { initializeApp } = require('firebase/app');
 const { getDatabase, ref, set, get, update, remove, push } = require('firebase/database');
 const userBusy = {};
+const adminSettings = { mode: "point" };
 const userCooldown = {};
 const app = express();
 const blockedUsers = {};
@@ -491,8 +492,7 @@ const now = Date.now();
     });
   }
   
-    if (data === "admin_mode_group") {
-    // حالت گروهی فعال شود (مثلاً در یک متغیر ذخیره کن)
+if (data === "admin_mode_group") {
     adminSettings.mode = "group";
     await bot.answerCallbackQuery(query.id, { text: "حالت گروهی فعال شد." });
     return bot.editMessageText("✅ حالت عملیات گروهی فعال شد.", {
@@ -508,6 +508,7 @@ const now = Date.now();
       message_id: query.message.message_id
     });
   }
+
   
   if (data === 'blocked_users_list') {
   const list = blockedUsers[userId] || [];
