@@ -1,6 +1,7 @@
-const { ref, get } = require("firebase/database");
+// rank.js
+const userRankState = {};
+const userSpamTimes = {}; // برای آنتی‌اسپم سبک
 
-// ساختار رنک و ستاره
 const allRanks = [
   {name: "Warrior", sub: ["III", "II", "I"], stars: 5},
   {name: "Elite", sub: ["III", "II", "I"], stars: 5},
@@ -14,29 +15,18 @@ const allRanks = [
   {name: "Immortal", sub: [], stars: null}
 ];
 
-const userRankState = {};
-const userSpamTimes = {}; // برای اسپم ضعیف
-
-// کمک
-function userRef(userId) {
-  return ref(db, `users/${userId}`);
-}
-async function getUser(userId) {
-  const snap = await get(userRef(userId));
-  return snap.exists() ? snap.val() : null;
-}
-
-// ضداسپم ساده: فقط هر ۳ ثانیه یک بار اجازه میده
+// آنتی اسپم سبک (هر ۲ ثانیه فقط یکبار)
 function checkSpam(userId, callbackQuery, bot) {
-  if (userSpamTimes[userId] && Date.now() - userSpamTimes[userId] < 3000) {
-    bot.answerCallbackQuery(callbackQuery.id, { text: "⏳ لطفاً کمی صبر کنید...", show_alert: false });
+  if (userSpamTimes[userId] && Date.now() - userSpamTimes[userId] < 2000) {
+    if (callbackQuery && callbackQuery.id)
+      bot.answerCallbackQuery(callbackQuery.id, { text: "⏳ لطفاً کمی صبر کنید...", show_alert: false });
     return true;
   }
   userSpamTimes[userId] = Date.now();
   return false;
 }
 
-// UI - انتخاب نوع محاسبه
+// دکمه انتخاب نوع محاسبه
 function sendRankTypeSelection(bot, chatId) {
   userRankState[chatId] = {};
   bot.sendMessage(chatId, "🔢 نوع محاسبه مورد نظر را انتخاب کنید:", {
@@ -51,7 +41,7 @@ function sendRankTypeSelection(bot, chatId) {
   });
 }
 
-// UI - انتخاب رنک
+// دکمه انتخاب رنک
 function sendRankSelection(bot, chatId, step = "start") {
   const rows = [];
   for (let i = 0; i < allRanks.length; i += 2) {
@@ -76,7 +66,7 @@ function sendRankSelection(bot, chatId, step = "start") {
   );
 }
 
-// UI - ساب‌رنک
+// دکمه انتخاب ساب رنک
 function sendSubRanks(bot, chatId, rank) {
   const found = allRanks.find(r => r.name === rank);
   const subs = found ? found.sub : [];
@@ -94,7 +84,7 @@ function sendSubRanks(bot, chatId, rank) {
   });
 }
 
-// UI - ستاره (با دکمه شیشه‌ای برای همه رنک‌ها به‌جز Immortal)
+// دکمه انتخاب ستاره (همه رنک‌ها بجز Immortal)
 function sendStarSelection(bot, chatId, rank, step = "current") {
   const found = allRanks.find(r => r.name === rank);
   let minStars = 1, maxStars = (found && found.stars) ? found.stars : 5;
@@ -121,25 +111,26 @@ function sendStarSelection(bot, chatId, rank, step = "current") {
   });
 }
 
-// UI - انتخاب وین‌ریت
+// دکمه انتخاب وین‌ریت
 function sendWinrateSelection(bot, chatId) {
   const options = [40, 50, 60, 70, 80, 90, 100];
   const buttons = [];
   for (let i = 0; i < options.length; i += 2) {
-const row = [
-  { text: `${options[i]}% وین ریت`, callback_data: `rank_winrate_${options[i]}` },
-  { text: `${options[i + 1]}% وین ریت`, callback_data: `rank_winrate_${options[i + 1]}` }
-];
-buttons.push(row);
+    const row = [
+      { text: `${options[i]}% وین ریت`, callback_data: `rank_winrate_${options[i]}` }
+    ];
+    if (options[i + 1]) row.push({ text: `${options[i + 1]}% وین ریت`, callback_data: `rank_winrate_${options[i + 1]}` });
+    buttons.push(row);
   }
   bot.sendMessage(chatId, "🎯 وین‌ریت دلخواه خود را انتخاب کنید:", {
     reply_markup: { inline_keyboard: buttons }
   });
 }
 
-// الگوریتم محاسبه ستاره مطلق
+// محاسبه فاصله ستاره بین هر دو نقطه
 function getAbsoluteStarNum(rankName, sub, star) {
   let total = 0;
+  // جمع ستاره همه رنک‌های قبل + ساب (اگر داشت) + ستاره
   for (const rank of allRanks) {
     if (rank.name === rankName) {
       if (rank.sub.length) {
@@ -173,15 +164,14 @@ function closeAllInline(bot, chatId, messageId) {
   }).catch(() => {});
 }
 
-// اعلام نتیجه
-async function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
+// اعلام نتیجه نهایی
+function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
   const state = userRankState[userId];
   const {
     currentStage, currentSub, currentStars,
     targetStage, targetSub, targetStars, winrate
   } = state;
 
-  // اختلاف ستاره
   const cs = getAbsoluteStarNum(currentStage, currentSub, currentStars);
   const ts = getAbsoluteStarNum(targetStage, targetSub, targetStars);
   if (ts <= cs) {
@@ -200,15 +190,15 @@ async function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
 🕐 اگر روزانه ۵ بازی با وین‌ریت ${wr}% انجام دهید: حدود ${daysNormal} روز
 🟢 اگر هر روز ۵ برد کامل داشته باشید (وین‌ریت ۱۰۰٪): حدود ${daysPerfect} روز`;
 
-  // بستن همه دکمه‌های شیشه‌ای فقط همینجا
+  // فقط اینجا همه دکمه‌ها رو ببند
   closeAllInline(bot, userId, replyToMessageId);
 
   bot.sendMessage(userId, msg);
   delete userRankState[userId];
 }
 
-// هندل دکمه
-async function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) {
+// هندل دکمه‌ها
+function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) {
   if (checkSpam(userId, callbackQuery, bot)) return;
 
   if (!userRankState[userId]) userRankState[userId] = {};
@@ -260,7 +250,7 @@ async function handleRankCallback(bot, userId, data, callbackQuery, replyToMessa
       if (state.type === "custom") {
         sendWinrateSelection(bot, userId);
       } else {
-        finalizeRankCalc(bot, userId, false, callbackQuery.message.message_id);
+        finalizeRankCalc(bot, userId, false, replyToMessageId);
       }
     }
     return;
@@ -269,12 +259,12 @@ async function handleRankCallback(bot, userId, data, callbackQuery, replyToMessa
   if (data.startsWith("rank_winrate_")) {
     const wr = parseInt(data.replace("rank_winrate_", ""));
     state.winrate = wr;
-    await finalizeRankCalc(bot, userId, true, callbackQuery.message.message_id);
+    finalizeRankCalc(bot, userId, true, replyToMessageId);
     return;
   }
 }
 
-// هندل پیام متنی ایمورتال
+// هندل پیام متنی (برای Immortal)
 function handleTextMessage(bot, msg) {
   const chatId = msg.chat.id;
   const state = userRankState[chatId];
@@ -319,8 +309,8 @@ function handleTextMessage(bot, msg) {
 
 // خروجی
 module.exports = {
+  userRankState,
   sendRankTypeSelection,
   handleRankCallback,
-  userRankState,
   handleTextMessage
 };
