@@ -9,6 +9,7 @@ const userCooldown = {};
 const app = express();
 const blockedUsers = {};
 const spamTracker = {};
+const adminMode = "group";
 const startCooldown = new Map();
 const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
@@ -432,6 +433,7 @@ const now = Date.now();
   const chat_id = query.message.chat.id;
   const messageId = query.message.message_id;
   const message_id = query.message.message_id; // این خط درست و کافی است
+rank.handleRankCallback(bot, userId, data, query, adminMode, adminId);
 
   const blockedBtn = MENU_BUTTONS.find(btn => btn.key === data);
   if (blockedBtn && !(await isButtonEnabled(data)) && userId !== adminId) {
@@ -1361,6 +1363,7 @@ bot.on('message', async (msg) => {
   const text = msg.text || '';
   if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
+rank.handleTextMessage(bot, msg, adminMode, adminId);
 
   if (state && state.step === 'ask_rank') {
     state.teammateProfile.rank = text;
