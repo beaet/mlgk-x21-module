@@ -1,34 +1,13 @@
 // rank.js
-
+const { checkSpam } = require('./spam');
 const userRankState = {}; // وضعیت هر کاربر برای روند محاسبه
 const userInlineMessages = {}; // پیام‌های دکمه‌دار هر کاربر
 
 // آنتی اسپم فقط برای کال‌بک‌های رنک (۲ ثانیه، بالای ۵ کلیک سریع)
-const rankSpamMap = {}; // فقط مخصوص rank.js
 
 function rankAntispam(userId, callbackQuery, bot) {
-  if (!rankSpamMap[userId]) rankSpamMap[userId] = [];
-
-  const now = Date.now();
-  // فقط ۶ ثانیه اخیر رو نگه دار (به جای ۲ ثانیه)
-  rankSpamMap[userId] = rankSpamMap[userId].filter(ts => now - ts < 6000);
-
-  rankSpamMap[userId].push(now);
-
-  // اگر توی ۶ ثانیه بیشتر از ۵ بار زد، اسپم حساب کن
-  if (rankSpamMap[userId].length > 5) {
-    if (callbackQuery && callbackQuery.id) {
-      bot.answerCallbackQuery(callbackQuery.id, {
-        text: "⏳ لطفاً کمی صبر کنید...",
-        show_alert: false,
-      });
-    }
-    return true; // یعنی اسپمه
-  }
-
-  return false; // مشکلی نیست
-}
-
+  
+  if (checkSpam(userId, query, bot, Number(process.env.ADMIN_ID))) return;
 const allRanks = [
   { name: "Warrior", sub: ["III", "II", "I"], stars: 5 },
   { name: "Elite", sub: ["III", "II", "I"], stars: 5 },
