@@ -126,9 +126,11 @@ function sendWinrateSelection(bot, chatId) {
   const options = [40, 50, 60, 70, 80, 90, 100];
   const buttons = [];
   for (let i = 0; i < options.length; i += 2) {
-    const row = [
-      { text: `${options[i + 1]) row.push({ text: `${options[i + 1]}% وین ریت`, callback_data: `rank_winrate_${options[i + 1]}` });
-    buttons.push(row);
+const row = [
+  { text: `${options[i]}% وین ریت`, callback_data: `rank_winrate_${options[i]}` },
+  { text: `${options[i + 1]}% وین ریت`, callback_data: `rank_winrate_${options[i + 1]}` }
+];
+buttons.push(row);
   }
   bot.sendMessage(chatId, "🎯 وین‌ریت دلخواه خود را انتخاب کنید:", {
     reply_markup: { inline_keyboard: buttons }
