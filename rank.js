@@ -331,7 +331,8 @@ function handleTextMessage(bot, msg) {
 
   // حالت وارد کردن ستاره Immortal هدف
   if (state.awaitingImmortalTarget) {
-    const) || value < 1 || value > 999) {
+    const value = parseInt(msg.text);
+    if (isNaN(value) || value < 1 || value > 999) {
       return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
     }
     delete state.awaitingImmortalTarget;
