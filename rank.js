@@ -7,7 +7,8 @@ const userInlineMessages = {}; // پیام‌های دکمه‌دار هر کا�
 
 function rankAntispam(userId, callbackQuery, bot) {
   
-  if (checkSpam(userId, query, bot, Number(process.env.ADMIN_ID))) return;
+  if (checkSpam(userId, callbackQuery, bot, Number(process.env.ADMIN_ID))) return;
+
 const allRanks = [
   { name: "Warrior", sub: ["III", "II", "I"], stars: 5 },
   { name: "Elite", sub: ["III", "II", "I"], stars: 5 },
@@ -335,8 +336,11 @@ function handleTextMessage(bot, msg) {
 }
 
 module.exports = {
-  userRankState,
+  rankAntispam,
   sendRankTypeSelection,
-  handleRankCallback,
-  handleTextMessage
+  sendRankSelection,
+  sendSubRanks,
+  sendStarSelection,
+  sendWinrateSelection,
+  finalizeRankCalc
 };
