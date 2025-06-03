@@ -1,8 +1,6 @@
-// rank.js
+const { ref, get, set, update } = require("firebase/database");
 
-const { ref, get, update } = require("firebase/database");
-
-// ----- ساختار رنک و ستاره -----
+// ساختار رنک و ساب‌رنک و ستاره
 const allRanks = [
   {name: "Warrior", sub: ["III", "II", "I"], stars: 5},
   {name: "Elite", sub: ["III", "II", "I"], stars: 5},
@@ -13,13 +11,14 @@ const allRanks = [
   {name: "Mythic", sub: [], stars: 24},
   {name: "Mythical Honor", sub: [], stars: 25},
   {name: "Glorious Mythic", sub: [], stars: 50},
-  {name: "Immortal", sub: [], stars: null} // فقط دستی
+  {name: "Immortal", sub: [], stars: null}
 ];
 
 const userRankState = {};
 const userCooldowns = {};
+const groupCooldown = {}; // userId: timestamp
 
-// ----- کمک -----
+// کمک
 function userRef(userId) {
   return ref(db, `users/${userId}`);
 }
@@ -32,7 +31,7 @@ function closeInline(bot, query) {
     bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
       chat_id: query.message.chat.id,
       message_id: query.message.message_id
-    }).catch(() => {});
+    }).catch(()=>{});
 }
 function checkSpam(userId, callbackQuery, bot) {
   if (userCooldowns[userId] && userCooldowns[userId] > Date.now()) {
@@ -48,7 +47,7 @@ function checkSpam(userId, callbackQuery, bot) {
   return false;
 }
 
-// ----- UI -----
+// UI
 function sendRankTypeSelection(bot, chatId) {
   userRankState[chatId] = {};
   bot.sendMessage(chatId, "🔢 نوع محاسبه مورد نظر را انتخاب کنید:", {
@@ -96,9 +95,7 @@ function sendSubRanks(bot, chatId, rank) {
     }
     return sendStarSelection(bot, chatId, rank);
   }
-  const buttons = subs.map(s => [
-    { text: s, callback_data: `rank_sub_${s}` }
-  ]);
+  const buttons = subs.map(s => [ { text: s, callback_data: `rank_sub_${s}` } ]);
   bot.sendMessage(chatId, `🎖 رنک ${rank} را دقیق‌تر مشخص کنید:`, {
     reply_markup: { inline_keyboard: buttons }
   });
@@ -111,11 +108,18 @@ function sendStarSelection(bot, chatId, rank, step = "current") {
     userRankState[chatId][step === "current" ? "awaitingImmortalInput" : "awaitingImmortalTarget"] = true;
     return;
   }
-  // Mythic و Honor و Glorious هم باید دکمه‌ شیشه‌ای بین بازه مربوطه داشته باشد
   if (rank === "Mythic")      { minStars = 1;  maxStars = 24; }
   if (rank === "Mythical Honor") { minStars = 25; maxStars = 49; }
-; i <= maxStars; i++) {
-    buttons.push([{ text: `${i}⭐`, callback_data: `rank_star_${i}` }]);
+  if (rank === "Glorious Mythic") { minStars = 50; maxStars = 99; }
+
+  const buttons = [];
+  let row = [];
+  for (let i = minStars; i <= maxStars; i++) {
+    row.push({ text: `${i}⭐`, callback_data: `rank_star_${i}` });
+    if (row.length === 5 || i === maxStars) {
+      buttons.push(row);
+      row = [];
+    }
   }
   bot.sendMessage(chatId, `⭐️ تعداد ستاره‌های ${rank} خود را انتخاب کنید:`, {
     reply_markup: { inline_keyboard: buttons }
@@ -123,15 +127,20 @@ function sendStarSelection(bot, chatId, rank, step = "current") {
 }
 function sendWinrateSelection(bot, chatId) {
   const options = [40, 50, 60, 70, 80, 90, 100];
-  const buttons = options.map(p => [
-    { text: `${p}% وین ریت`, callback_data: `rank_winrate_${p}` }
-  ]);
+  const buttons = [];
+  for (let i = 0; i < options.length; i += 2) {
+    const row = [
+      { text: `${options[i]}% وین ریت`, callback_data: `rank_winrate_${options[i]}` }
+    ];
+    if (options[i + 1]) row.push({ text: `${options[i + 1]}% وین ریت`, callback_data: `rank_winrate_${options[i + 1]}` });
+    buttons.push(row);
+  }
   bot.sendMessage(chatId, "🎯 وین‌ریت دلخواه خود را انتخاب کنید:", {
     reply_markup: { inline_keyboard: buttons }
   });
 }
 
-// ---- تبدیل هر نقطه به شماره ستاره مطلق ----
+// الگوریتم مطلق ستاره
 function getAbsoluteStarNum(rankName, sub, star) {
   let total = 0;
   for (const rank of allRanks) {
@@ -153,23 +162,21 @@ function getAbsoluteStarNum(rankName, sub, star) {
   }
   return total;
 }
-function getStarDistance(startRank, startSub, startStar, endRank, endSub, endStar) {
-  let startIdx = getAbsoluteStarNum(startRank, startSub, startStar);
-  let endIdx = getAbsoluteStarNum(endRank, endSub, endStar);
-  return endIdx - startIdx;
-}
-function calculateWins100;
+function calculateWinsNeeded(stars, winrate) {
+  const wr = winrate / 100;
   const gamesNeeded = Math.ceil(stars / wr);
   return { neededStars: stars, gamesNeeded };
 }
 
-// ---- finalize & کم کردن امتیاز ----
+// ---- finalize & کم کردن امتیاز و کول‌داون ----
 async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point") {
   const state = userRankState[userId];
   const {
     currentStage, currentSub, currentStars,
     targetStage, targetSub, targetStars, winrate
   } = state;
+
+  // اختلاف ستاره
   const cs = getAbsoluteStarNum(currentStage, currentSub, currentStars);
   const ts = getAbsoluteStarNum(targetStage, targetSub, targetStars);
   if (ts <= cs) {
@@ -182,15 +189,30 @@ async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point") {
   const daysPerfect = Math.ceil(result.neededStars / 5);
 
   let msgPoint = "";
-  if (adminMode === "point") {
-    const user = await getUser(userId);
+  let user = await getUser(userId);
+  const isAdmin = userId === adminId;
+
+  // محدودیت group: فقط برای غیر ادمین
+  if (adminMode === "group" && !isAdmin) {
+    const now = Date.now();
+    if (user && user.last_chance_use && (now - user.last_chance_use) < 2 * 60 * 60 * 1000) {
+      const left = Math.ceil((2*60*60*1000 - (now - user.last_chance_use)) / 60000);
+      delete userRankState[userId];
+      return bot.sendMessage(userId, `⏳ فقط هر ۲ ساعت یک‌بار می‌توانید استفاده کنید. زمان باقی مانده: ${left} دقیقه`);
+    }
+    await update(userRef(userId), { last_chance_use: now });
+  }
+
+  // کم کردن امتیاز: فقط برای غیر ادمین و فقط در حالت point
+  if (adminMode === "point" && !isAdmin) {
     let userPoints = (user && typeof user.points === "number") ? user.points : 0;
     if (userPoints < 1) {
       delete userRankState[userId];
       return bot.sendMessage(userId, "❌ امتیاز کافی برای استفاده از این قابلیت ندارید.");
     }
     await update(userRef(userId), { points: userPoints - 1 });
-    msgPoint = `\n✅ یک امتیاز از حساب شما کسر شد. امتیاز فعلی: ${userPoints - 1}`;
+    user = await getUser(userId);
+    msgPoint = `\n✅ یک امتیاز از حساب شما کسر شد. امتیاز فعلی: ${user.points}`;
   }
 
   const msg = `📊 نتیجه محاسبه:
@@ -204,8 +226,8 @@ async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point") {
 
 // ---- هندل دکمه ----
 async function handleRankCallback(bot, userId, data, callbackQuery, adminMode = "point") {
+  closeInline(bot, callbackQuery); // همیشه قبل از هر چیزی دکمه رو ببند
   if (checkSpam(userId, callbackQuery, bot)) return;
-  closeInline(bot, callbackQuery);
 
   if (!userRankState[userId]) userRankState[userId] = {};
   const state = userRankState[userId];
@@ -276,7 +298,7 @@ function handleTextMessage(bot, msg, adminMode = "point") {
   const state = userRankState[chatId];
   if (!state) return;
 
-  // Immortal فقط دستی
+  // فقط Immortal دستی
   if (state.awaitingImmortalInput) {
     const value = parseInt(msg.text);
     if (isNaN(value) || value < 1 || value > 999) {
@@ -317,6 +339,6 @@ function handleTextMessage(bot, msg, adminMode = "point") {
 module.exports = {
   sendRankTypeSelection,
   handleRankCallback,
-userRankState,
+  userRankState,
   handleTextMessage
 };
