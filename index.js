@@ -8,6 +8,7 @@ const adminSettings = { mode: "point" };
 const userCooldown = {};
 const app = express();
 const blockedUsers = {};
+const userLastUse = {};
 const spamTracker = {};
 const adminMode = "group";
 const startCooldown = new Map();
