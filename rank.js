@@ -1,6 +1,6 @@
 const { ref, get, set, update } = require("firebase/database");
 
-// ساختار رنک و ساب‌رنک و ستاره
+// ساختار رنک و ستاره
 const allRanks = [
   {name: "Warrior", sub: ["III", "II", "I"], stars: 5},
   {name: "Elite", sub: ["III", "II", "I"], stars: 5},
@@ -16,7 +16,6 @@ const allRanks = [
 
 const userRankState = {};
 const userCooldowns = {};
-const groupCooldown = {}; // userId: timestamp
 
 // کمک
 function userRef(userId) {
@@ -26,13 +25,18 @@ async function getUser(userId) {
   const snap = await get(userRef(userId));
   return snap.exists() ? snap.val() : null;
 }
+
+// بستن دکمه شیشه‌ای
 function closeInline(bot, query) {
-  if (query && query.message)
+  if (query && query.message) {
     bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
       chat_id: query.message.chat.id,
       message_id: query.message.message_id
-    }).catch(()=>{});
+    }).catch(() => {});
+  }
 }
+
+// اسپم/کول‌داون ۱ دقیقه‌ای (برای هر کاربر)
 function checkSpam(userId, callbackQuery, bot) {
   if (userCooldowns[userId] && userCooldowns[userId] > Date.now()) {
     bot.answerCallbackQuery(callbackQuery.id, { text: "⛔️ به دلیل اسپم تا ۱ دقیقه نمی‌توانید استفاده کنید.", show_alert: true });
@@ -47,7 +51,7 @@ function checkSpam(userId, callbackQuery, bot) {
   return false;
 }
 
-// UI
+// UI - انتخاب نوع محاسبه
 function sendRankTypeSelection(bot, chatId) {
   userRankState[chatId] = {};
   bot.sendMessage(chatId, "🔢 نوع محاسبه مورد نظر را انتخاب کنید:", {
@@ -61,6 +65,8 @@ function sendRankTypeSelection(bot, chatId) {
     }
   });
 }
+
+// UI - انتخاب رنک
 function sendRankSelection(bot, chatId, step = "start") {
   const rows = [];
   for (let i = 0; i < allRanks.length; i += 2) {
@@ -84,6 +90,8 @@ function sendRankSelection(bot, chatId, step = "start") {
     { reply_markup: { inline_keyboard: rows } }
   );
 }
+
+// UI - ساب‌رنک
 function sendSubRanks(bot, chatId, rank) {
   const found = allRanks.find(r => r.name === rank);
   const subs = found ? found.sub : [];
@@ -95,11 +103,13 @@ function sendSubRanks(bot, chatId, rank) {
     }
     return sendStarSelection(bot, chatId, rank);
   }
-  const buttons = subs.map(s => [ { text: s, callback_data: `rank_sub_${s}` } ]);
+  const buttons = subs.map(s => [{ text: s, callback_data: `rank_sub_${s}` }]);
   bot.sendMessage(chatId, `🎖 رنک ${rank} را دقیق‌تر مشخص کنید:`, {
     reply_markup: { inline_keyboard: buttons }
   });
 }
+
+// UI - ستاره (با دکمه شیشه‌ای برای همه رنک‌ها به‌جز Immortal)
 function sendStarSelection(bot, chatId, rank, step = "current") {
   const found = allRanks.find(r => r.name === rank);
   let minStars = 1, maxStars = (found && found.stars) ? found.stars : 5;
@@ -108,7 +118,7 @@ function sendStarSelection(bot, chatId, rank, step = "current") {
     userRankState[chatId][step === "current" ? "awaitingImmortalInput" : "awaitingImmortalTarget"] = true;
     return;
   }
-  if (rank === "Mythic")      { minStars = 1;  maxStars = 24; }
+  if (rank === "Mythic") { minStars = 1; maxStars = 24; }
   if (rank === "Mythical Honor") { minStars = 25; maxStars = 49; }
   if (rank === "Glorious Mythic") { minStars = 50; maxStars = 99; }
 
@@ -125,6 +135,8 @@ function sendStarSelection(bot, chatId, rank, step = "current") {
     reply_markup: { inline_keyboard: buttons }
   });
 }
+
+// UI - انتخاب وین‌ریت
 function sendWinrateSelection(bot, chatId) {
   const options = [40, 50, 60, 70, 80, 90, 100];
   const buttons = [];
@@ -168,8 +180,8 @@ function calculateWinsNeeded(stars, winrate) {
   return { neededStars: stars, gamesNeeded };
 }
 
-// ---- finalize & کم کردن امتیاز و کول‌داون ----
-async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point") {
+// finalize & کم کردن امتیاز و کول‌داون
+async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point", adminId) {
   const state = userRankState[userId];
   const {
     currentStage, currentSub, currentStars,
@@ -224,9 +236,9 @@ async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point") {
   delete userRankState[userId];
 }
 
-// ---- هندل دکمه ----
-async function handleRankCallback(bot, userId, data, callbackQuery, adminMode = "point") {
-  closeInline(bot, callbackQuery); // همیشه قبل از هر چیزی دکمه رو ببند
+// هندل دکمه
+async function handleRankCallback(bot, userId, data, callbackQuery, adminMode = "point", adminId) {
+  closeInline(bot, callbackQuery); // همیشه اول دکمه رو ببند
   if (checkSpam(userId, callbackQuery, bot)) return;
 
   if (!userRankState[userId]) userRankState[userId] = {};
@@ -278,7 +290,7 @@ async function handleRankCallback(bot, userId, data, callbackQuery, adminMode = 
       if (state.type === "custom") {
         sendWinrateSelection(bot, userId);
       } else {
-        finalizeRankCalc(bot, userId, false, adminMode);
+        finalizeRankCalc(bot, userId, false, adminMode, adminId);
       }
     }
     return;
@@ -287,13 +299,13 @@ async function handleRankCallback(bot, userId, data, callbackQuery, adminMode = 
   if (data.startsWith("rank_winrate_")) {
     const wr = parseInt(data.replace("rank_winrate_", ""));
     state.winrate = wr;
-    await finalizeRankCalc(bot, userId, true, adminMode);
+    await finalizeRankCalc(bot, userId, true, adminMode, adminId);
     return;
   }
 }
 
-// ---- هندل پیام متنی ایمورتال ----
-function handleTextMessage(bot, msg, adminMode = "point") {
+// هندل پیام متنی ایمورتال
+function handleTextMessage(bot, msg, adminMode = "point", adminId) {
   const chatId = msg.chat.id;
   const state = userRankState[chatId];
   if (!state) return;
@@ -302,11 +314,7 @@ function handleTextMessage(bot, msg, adminMode = "point") {
   if (state.awaitingImmortalInput) {
     const value = parseInt(msg.text);
     if (isNaN(value) || value < 1 || value > 999) {
-      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
-    }
-    delete state.awaitingImmortalInput;
-    if (!state.currentStars) {
-      state.currentStars = value;
+      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12)..currentStars = value;
       state.step = "targetRank";
       sendRankSelection(bot, chatId, "target");
     } else {
@@ -314,7 +322,7 @@ function handleTextMessage(bot, msg, adminMode = "point") {
       if (state.type === "custom") {
         sendWinrateSelection(bot, chatId);
       } else {
-        finalizeRankCalc(bot, chatId, false, adminMode);
+        finalizeRankCalc(bot, chatId, false, adminMode, adminId);
       }
     }
     return;
@@ -329,13 +337,13 @@ function handleTextMessage(bot, msg, adminMode = "point") {
     if (state.type === "custom") {
       sendWinrateSelection(bot, chatId);
     } else {
-      finalizeRankCalc(bot, chatId, false, adminMode);
+      finalizeRankCalc(bot, chatId, false, adminMode, adminId);
     }
     return;
   }
 }
 
-// ---- خروجی ----
+// خروجی
 module.exports = {
   sendRankTypeSelection,
   handleRankCallback,
