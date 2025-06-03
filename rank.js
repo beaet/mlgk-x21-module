@@ -37,17 +37,24 @@ function closeInline(bot, query) {
 }
 
 // اسپم/کول‌داون ۱ دقیقه‌ای (برای هر کاربر)
-function checkSpam(userId, callbackQuery, bot) {
-  if (userCooldowns[userId] && userCooldowns[userId] > Date.now()) {
-    bot.answerCallbackQuery(callbackQuery.id, { text: "⛔️ به دلیل اسپم تا ۱ دقیقه نمی‌توانید استفاده کنید.", show_alert: true });
+function checkSpam(userId, callbackQueryOrMessage, bot) {
+  const now = Date.now();
+
+  if (userCooldowns[userId] && userCooldowns[userId] > now) {
+    const remaining = Math.ceil((userCooldowns[userId] - now) / 1000);
+    if (callbackQueryOrMessage?.id) {
+      bot.answerCallbackQuery(callbackQueryOrMessage.id, {
+        text: `⛔️ لطفاً ${remaining} ثانیه صبر کنید.`,
+        show_alert: true
+      });
+    } else if (callbackQueryOrMessage?.chat?.id) {
+      bot.sendMessage(callbackQueryOrMessage.chat.id, `⛔️ لطفاً ${remaining} ثانیه صبر کنید.`);
+    }
     return true;
   }
-  if (userCooldowns[userId] && Date.now() - userCooldowns[userId] < 1000) {
-    userCooldowns[userId] = Date.now() + 60000;
-    bot.answerCallbackQuery(callbackQuery.id, { text: "⛔️ اسپم دکمه! تا ۱ دقیقه نمی‌توانید استفاده کنید.", show_alert: true });
-    return true;
-  }
-  userCooldowns[userId] = Date.now();
+
+  // تعیین کول‌داون ۶۰ ثانیه‌ای
+  userCooldowns[userId] = now + 60000;
   return false;
 }
 
