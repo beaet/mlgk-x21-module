@@ -310,37 +310,33 @@ function handleTextMessage(bot, msg, adminMode = "point", adminId) {
   const state = userRankState[chatId];
   if (!state) return;
 
-  // فقط Immortal دستی
-  if (state.awaitingImmortalInput) {
-    const value = parseInt(msg.text);
-    if (isNaN(value) || value < 1 || value > 999) {
-      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12)..currentStars = value;
-      state.step = "targetRank";
-      sendRankSelection(bot, chatId, "target");
-    } else {
-      state.targetStars = value;
-      if (state.type === "custom") {
-        sendWinrateSelection(bot, chatId);
-      } else {
-        finalizeRankCalc(bot, chatId, false, adminMode, adminId);
-      }
-    }
-    return;
+// فقط Immortal دستی
+if (state.awaitingImmortalInput) {
+  const value = parseInt(msg.text);
+  if (isNaN(value) || value < 1 || value > 999) {
+    return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
   }
-  if (state.awaitingImmortalTarget) {
-    const value = parseInt(msg.text);
-    if (isNaN(value) || value < 1 || value > 999) {
-      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
-    }
-    delete state.awaitingImmortalTarget;
-    state.targetStars = value;
-    if (state.type === "custom") {
-      sendWinrateSelection(bot, chatId);
-    } else {
-      finalizeRankCalc(bot, chatId, false, adminMode, adminId);
-    }
-    return;
+  delete state.awaitingImmortalInput;
+  state.currentStars = value;
+  state.step = "targetRank";
+  sendRankSelection(bot, chatId, "target");
+  return;
+}
+
+if (state.awaitingImmortalTarget) {
+  const value = parseInt(msg.text);
+  if (isNaN(value) || value < 1 || value > 999) {
+    return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
   }
+  delete state.awaitingImmortalTarget;
+  state.targetStars = value;
+  if (state.type === "custom") {
+    sendWinrateSelection(bot, chatId);
+  } else {
+    finalizeRankCalc(bot, chatId, false, adminMode, adminId);
+  }
+  return;
+}
 }
 
 // خروجی
