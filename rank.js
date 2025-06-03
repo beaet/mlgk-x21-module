@@ -1,13 +1,8 @@
 // rank.js
-const { checkSpam } = require('./spam');
+
 const userRankState = {}; // وضعیت هر کاربر برای روند محاسبه
+const userSpamTimes = {}; // آنتی اسپم سبک
 const userInlineMessages = {}; // پیام‌های دکمه‌دار هر کاربر
-
-// آنتی اسپم فقط برای کال‌بک‌های رنک (۲ ثانیه، بالای ۵ کلیک سریع)
-
-function rankAntispam(userId, callbackQuery, bot) {
-  
-  if (checkSpam(userId, callbackQuery, bot, Number(process.env.ADMIN_ID))) return;
 
 const allRanks = [
   { name: "Warrior", sub: ["III", "II", "I"], stars: 5 },
@@ -21,6 +16,17 @@ const allRanks = [
   { name: "Glorious Mythic", sub: [], stars: 50 },
   { name: "Immortal", sub: [], stars: null }
 ];
+
+// آنتی اسپم بسیار سبک (۲ ثانیه)
+function checkSpam(userId, callbackQuery, bot) {
+  if (userSpamTimes[userId] && Date.now() - userSpamTimes[userId] < 2000) {
+    if (callbackQuery && callbackQuery.id)
+      bot.answerCallbackQuery(callbackQuery.id, { text: "⏳ لطفاً کمی صبر کنید...", show_alert: false });
+    return true;
+  }
+  userSpamTimes[userId] = Date.now();
+  return false;
+}
 
 // ذخیره پیام دکمه‌دار برای بستن همگانی
 function saveInlineMsg(userId, messageId) {
@@ -188,6 +194,13 @@ function sendWinrateSelection(bot, chatId) {
   }).then(sent => saveInlineMsg(chatId, sent.message_id));
 }
 
+// محاسبه تعداد برد لازم
+function calculateWinsNeeded(stars, winrate) {
+  const wr = winrate / 100;
+  const gamesNeeded = Math.ceil(stars / wr);
+  return { neededStars: stars, gamesNeeded };
+}
+
 // اعلام نتیجه و بستن همه دکمه‌ها
 function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
   const state = userRankState[userId];
@@ -223,9 +236,9 @@ function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
   delete userRankState[userId];
 }
 
-// هندل دکمه‌ها (آنتی اسپم فقط اینجاست!)
+// هندل دکمه‌ها
 function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) {
-  if (rankAntispam(userId, callbackQuery, bot)) return;
+  if (checkSpam(userId, callbackQuery, bot)) return;
 
   if (!userRankState[userId]) userRankState[userId] = {};
   const state = userRankState[userId];
@@ -296,7 +309,6 @@ function handleTextMessage(bot, msg) {
   const state = userRankState[chatId];
   if (!state) return;
 
-  // حالت وارد کردن ستاره Immortal فعلی
   if (state.awaitingImmortalInput) {
     const value = parseInt(msg.text);
     if (isNaN(value) || value < 1 || value > 999) {
@@ -317,8 +329,6 @@ function handleTextMessage(bot, msg) {
     }
     return;
   }
-
-  // حالت وارد کردن ستاره Immortal هدف
   if (state.awaitingImmortalTarget) {
     const value = parseInt(msg.text);
     if (isNaN(value) || value < 1 || value > 999) {
@@ -335,12 +345,10 @@ function handleTextMessage(bot, msg) {
   }
 }
 
+// خروجی ماژول
 module.exports = {
-  rankAntispam,
+  userRankState,
   sendRankTypeSelection,
-  sendRankSelection,
-  sendSubRanks,
-  sendStarSelection,
-  sendWinrateSelection,
-  finalizeRankCalc
+  handleRankCallback,
+  handleTextMessage
 };
