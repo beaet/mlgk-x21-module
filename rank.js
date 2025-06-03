@@ -1,4 +1,4 @@
-const { ref, get, set, update } = require("firebase/database");
+const { ref, get } = require("firebase/database");
 
 // ساختار رنک و ستاره
 const allRanks = [
@@ -15,7 +15,7 @@ const allRanks = [
 ];
 
 const userRankState = {};
-const userCooldowns = {};
+const userSpamTimes = {}; // برای اسپم ضعیف
 
 // کمک
 function userRef(userId) {
@@ -26,35 +26,13 @@ async function getUser(userId) {
   return snap.exists() ? snap.val() : null;
 }
 
-// بستن دکمه شیشه‌ای
-function closeInline(bot, query) {
-  if (query && query.message) {
-    bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
-      chat_id: query.message.chat.id,
-      message_id: query.message.message_id
-    }).catch(() => {});
-  }
-}
-
-// اسپم/کول‌داون ۱ دقیقه‌ای (برای هر کاربر)
-function checkSpam(userId, callbackQueryOrMessage, bot) {
-  const now = Date.now();
-
-  if (userCooldowns[userId] && userCooldowns[userId] > now) {
-    const remaining = Math.ceil((userCooldowns[userId] - now) / 1000);
-    if (callbackQueryOrMessage?.id) {
-      bot.answerCallbackQuery(callbackQueryOrMessage.id, {
-        text: `⛔️ لطفاً ${remaining} ثانیه صبر کنید.`,
-        show_alert: true
-      });
-    } else if (callbackQueryOrMessage?.chat?.id) {
-      bot.sendMessage(callbackQueryOrMessage.chat.id, `⛔️ لطفاً ${remaining} ثانیه صبر کنید.`);
-    }
+// ضداسپم ساده: فقط هر ۳ ثانیه یک بار اجازه میده
+function checkSpam(userId, callbackQuery, bot) {
+  if (userSpamTimes[userId] && Date.now() - userSpamTimes[userId] < 3000) {
+    bot.answerCallbackQuery(callbackQuery.id, { text: "⏳ لطفاً کمی صبر کنید...", show_alert: false });
     return true;
   }
-
-  // تعیین کول‌داون ۶۰ ثانیه‌ای
-  userCooldowns[userId] = now + 60000;
+  userSpamTimes[userId] = Date.now();
   return false;
 }
 
@@ -149,9 +127,7 @@ function sendWinrateSelection(bot, chatId) {
   const buttons = [];
   for (let i = 0; i < options.length; i += 2) {
     const row = [
-      { text: `${options[i]}% وین ریت`, callback_data: `rank_winrate_${options[i]}` }
-    ];
-    if (options[i + 1]) row.push({ text: `${options[i + 1]}% وین ریت`, callback_data: `rank_winrate_${options[i + 1]}` });
+      { text: `${options[i + 1]) row.push({ text: `${options[i + 1]}% وین ریت`, callback_data: `rank_winrate_${options[i + 1]}` });
     buttons.push(row);
   }
   bot.sendMessage(chatId, "🎯 وین‌ریت دلخواه خود را انتخاب کنید:", {
@@ -159,7 +135,7 @@ function sendWinrateSelection(bot, chatId) {
   });
 }
 
-// الگوریتم مطلق ستاره
+// الگوریتم محاسبه ستاره مطلق
 function getAbsoluteStarNum(rankName, sub, star) {
   let total = 0;
   for (const rank of allRanks) {
@@ -187,8 +163,16 @@ function calculateWinsNeeded(stars, winrate) {
   return { neededStars: stars, gamesNeeded };
 }
 
-// finalize & کم کردن امتیاز و کول‌داون
-async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point", adminId) {
+// بستن همه دکمه‌های شیشه‌ای فقط در پیام نهایی
+function closeAllInline(bot, chatId, messageId) {
+  bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
+    chat_id: chatId,
+    message_id: messageId
+  }).catch(() => {});
+}
+
+// اعلام نتیجه
+async function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
   const state = userRankState[userId];
   const {
     currentStage, currentSub, currentStars,
@@ -200,6 +184,7 @@ async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point", admi
   const ts = getAbsoluteStarNum(targetStage, targetSub, targetStars);
   if (ts <= cs) {
     delete userRankState[userId];
+    closeAllInline(bot, userId, replyToMessageId);
     return bot.sendMessage(userId, "⛔️ رنک هدف باید بالاتر از رنک فعلی باشد.");
   }
   const wr = winrate || 50;
@@ -207,45 +192,21 @@ async function finalizeRankCalc(bot, userId, isCustom, adminMode = "point", admi
   const daysNormal = Math.ceil(result.gamesNeeded / 5);
   const daysPerfect = Math.ceil(result.neededStars / 5);
 
-  let msgPoint = "";
-  let user = await getUser(userId);
-  const isAdmin = userId === adminId;
-
-  // محدودیت group: فقط برای غیر ادمین
-  if (adminMode === "group" && !isAdmin) {
-    const now = Date.now();
-    if (user && user.last_chance_use && (now - user.last_chance_use) < 2 * 60 * 60 * 1000) {
-      const left = Math.ceil((2*60*60*1000 - (now - user.last_chance_use)) / 60000);
-      delete userRankState[userId];
-      return bot.sendMessage(userId, `⏳ فقط هر ۲ ساعت یک‌بار می‌توانید استفاده کنید. زمان باقی مانده: ${left} دقیقه`);
-    }
-    await update(userRef(userId), { last_chance_use: now });
-  }
-
-  // کم کردن امتیاز: فقط برای غیر ادمین و فقط در حالت point
-  if (adminMode === "point" && !isAdmin) {
-    let userPoints = (user && typeof user.points === "number") ? user.points : 0;
-    if (userPoints < 1) {
-      delete userRankState[userId];
-      return bot.sendMessage(userId, "❌ امتیاز کافی برای استفاده از این قابلیت ندارید.");
-    }
-    await update(userRef(userId), { points: userPoints - 1 });
-    user = await getUser(userId);
-    msgPoint = `\n✅ یک امتیاز از حساب شما کسر شد. امتیاز فعلی: ${user.points}`;
-  }
-
   const msg = `📊 نتیجه محاسبه:
 ✅ فاصله تا رنک هدف: ${result.neededStars} ستاره
 🎯 تعداد بازی مورد نیاز با وین‌ریت ${wr}%: ${result.gamesNeeded} بازی
 🕐 اگر روزانه ۵ بازی با وین‌ریت ${wr}% انجام دهید: حدود ${daysNormal} روز
-🟢 اگر هر روز ۵ برد کامل داشته باشید (وین‌ریت ۱۰۰٪): حدود ${daysPerfect} روز${msgPoint}`;
+🟢 اگر هر روز ۵ برد کامل داشته باشید (وین‌ریت ۱۰۰٪): حدود ${daysPerfect} روز`;
+
+  // بستن همه دکمه‌های شیشه‌ای فقط همینجا
+  closeAllInline(bot, userId, replyToMessageId);
+
   bot.sendMessage(userId, msg);
   delete userRankState[userId];
 }
 
 // هندل دکمه
-async function handleRankCallback(bot, userId, data, callbackQuery, adminMode = "point", adminId) {
-  closeInline(bot, callbackQuery); // همیشه اول دکمه رو ببند
+async function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) {
   if (checkSpam(userId, callbackQuery, bot)) return;
 
   if (!userRankState[userId]) userRankState[userId] = {};
@@ -297,7 +258,7 @@ async function handleRankCallback(bot, userId, data, callbackQuery, adminMode = 
       if (state.type === "custom") {
         sendWinrateSelection(bot, userId);
       } else {
-        finalizeRankCalc(bot, userId, false, adminMode, adminId);
+        finalizeRankCalc(bot, userId, false, callbackQuery.message.message_id);
       }
     }
     return;
@@ -306,44 +267,52 @@ async function handleRankCallback(bot, userId, data, callbackQuery, adminMode = 
   if (data.startsWith("rank_winrate_")) {
     const wr = parseInt(data.replace("rank_winrate_", ""));
     state.winrate = wr;
-    await finalizeRankCalc(bot, userId, true, adminMode, adminId);
+    await finalizeRankCalc(bot, userId, true, callbackQuery.message.message_id);
     return;
   }
 }
 
 // هندل پیام متنی ایمورتال
-function handleTextMessage(bot, msg, adminMode = "point", adminId) {
+function handleTextMessage(bot, msg) {
   const chatId = msg.chat.id;
   const state = userRankState[chatId];
   if (!state) return;
 
-// فقط Immortal دستی
-if (state.awaitingImmortalInput) {
-  const value = parseInt(msg.text);
-  if (isNaN(value) || value < 1 || value > 999) {
-    return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
+  // فقط Immortal دستی
+  if (state.awaitingImmortalInput) {
+    const value = parseInt(msg.text);
+    if (isNaN(value) || value < 1 || value > 999) {
+      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
+    }
+    delete state.awaitingImmortalInput;
+    if (!state.currentStars) {
+      state.currentStars = value;
+      state.step = "targetRank";
+      sendRankSelection(bot, chatId, "target");
+    } else {
+      state.targetStars = value;
+      if (state.type === "custom") {
+        sendWinrateSelection(bot, chatId);
+      } else {
+        finalizeRankCalc(bot, chatId, false, msg.message_id);
+      }
+    }
+    return;
   }
-  delete state.awaitingImmortalInput;
-  state.currentStars = value;
-  state.step = "targetRank";
-  sendRankSelection(bot, chatId, "target");
-  return;
-}
-
-if (state.awaitingImmortalTarget) {
-  const value = parseInt(msg.text);
-  if (isNaN(value) || value < 1 || value > 999) {
-    return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
+  if (state.awaitingImmortalTarget) {
+    const value = parseInt(msg.text);
+    if (isNaN(value) || value < 1 || value > 999) {
+      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
+    }
+    delete state.awaitingImmortalTarget;
+    state.targetStars = value;
+    if (state.type === "custom") {
+      sendWinrateSelection(bot, chatId);
+    } else {
+      finalizeRankCalc(bot, chatId, false, msg.message_id);
+    }
+    return;
   }
-  delete state.awaitingImmortalTarget;
-  state.targetStars = value;
-  if (state.type === "custom") {
-    sendWinrateSelection(bot, chatId);
-  } else {
-    finalizeRankCalc(bot, chatId, false, adminMode, adminId);
-  }
-  return;
-}
 }
 
 // خروجی
