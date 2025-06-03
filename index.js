@@ -529,17 +529,29 @@ if (data === "admin_mode_group") {
 }
 
 // ⬇️ برای شروع ماشین‌حساب رنک
-if (data === 'rank_calculator') {
-  const user = await getUser(userId);
-  rank.userRankState[userId] = { user };
-  return rank.sendRankTypeSelection(bot, userId);
-}
+  if (data === 'rank_calculator') {
+    if (userId !== adminId) {
+      const now = Date.now();
+      if (
+        userLastUse[userId] &&
+        now - userLastUse[userId] < 3 * 60 * 60 * 1000
+      ) {
+        const remain = Math.ceil((3 * 60 * 60 * 1000 - (now - userLastUse[userId])) / 60000);
+        return bot.answerCallbackQuery(query.id, { text: `❗️هر سه ساعت فقط یک بار می‌توانید استفاده کنید.\nزمان باقی‌مانده: ${remain} دقیقه`, show_alert: true });
+      }
+      userLastUse[userId] = now; // ثبت آخرین استفاده
+    }
 
-// ⬇️ مدیریت مراحل مختلف انتخاب
-if (data.startsWith('rank_')) {
-  await rank.handleRankCallback(bot, userId, data);
-  return;
-}
+    const user = await getUser(userId); // تابع getUser همان قبلی
+    rank.userRankState[userId] = { user };
+    return rank.sendRankTypeSelection(bot, userId);
+  }
+
+  // مدیریت مراحل بعدی انتخاب رنک (بدون محدودیت سه ساعته)
+  if (data.startsWith('rank_')) {
+    await rank.handleRankCallback(bot, userId, data);
+    return;
+  }
 
 // هندل آنبلاک کردن
 if (data.startsWith('unblock_')) {
