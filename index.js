@@ -406,6 +406,12 @@ bot.onText(/\/panel/, async (msg) => {
                           { text: '🎲 ویرایش شانس روزانه', callback_data: 'edit_chance' }
         ],
         [
+                                  { text: '🎟️ حساب کردن رنک با کم شدن امتیاز', callback_data: 'admin_mode_point' }
+        ],
+        [
+                                  { text: '🎫 حساب کردن رنک با محدودیت زمانی', callback_data: 'admin_mode_group' }
+        ],
+        [
           { text: '📋 جزییات کاربران', callback_data: 'user_details' }
         ]
       ]
@@ -482,6 +488,24 @@ const now = Date.now();
       chat_id,
       message_id,
       ...mainMenuKeyboard()
+    });
+  }
+  
+    if (data === "admin_mode_group") {
+    // حالت گروهی فعال شود (مثلاً در یک متغیر ذخیره کن)
+    adminSettings.mode = "group";
+    await bot.answerCallbackQuery(query.id, { text: "حالت گروهی فعال شد." });
+    return bot.editMessageText("✅ حالت عملیات گروهی فعال شد.", {
+      chat_id: query.message.chat.id,
+      message_id: query.message.message_id
+    });
+  }
+  if (data === "admin_mode_point") {
+    adminSettings.mode = "point";
+    await bot.answerCallbackQuery(query.id, { text: "حالت امتیاز فعال شد." });
+    return bot.editMessageText("✅ حالت امتیاز فعال شد.", {
+      chat_id: query.message.chat.id,
+      message_id: query.message.message_id
     });
   }
   
