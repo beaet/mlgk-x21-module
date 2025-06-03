@@ -4,20 +4,29 @@ const userRankState = {}; // وضعیت هر کاربر برای روند محا
 const userInlineMessages = {}; // پیام‌های دکمه‌دار هر کاربر
 
 // آنتی اسپم فقط برای کال‌بک‌های رنک (۲ ثانیه، بالای ۵ کلیک سریع)
-const rankSpamMap = {}; // userId => [timestamps]
+const rankSpamMap = {}; // فقط مخصوص rank.js
+
 function rankAntispam(userId, callbackQuery, bot) {
   if (!rankSpamMap[userId]) rankSpamMap[userId] = [];
+
   const now = Date.now();
-  // فقط ۲ ثانیه اخیر رو نگه دار
-  rankSpamMap[userId] = rankSpamMap[userId].filter(ts => now - ts < 2000);
+  // فقط ۶ ثانیه اخیر رو نگه دار (به جای ۲ ثانیه)
+  rankSpamMap[userId] = rankSpamMap[userId].filter(ts => now - ts < 6000);
+
   rankSpamMap[userId].push(now);
-  // اگر توی ۲ ثانیه بیشتر از ۵ بار زد، اسپم حساب کن
+
+  // اگر توی ۶ ثانیه بیشتر از ۵ بار زد، اسپم حساب کن
   if (rankSpamMap[userId].length > 5) {
-    if (callbackQuery && callbackQuery.id)
-      bot.answerCallbackQuery(callbackQuery.id, { text: "⏳ لطفاً کمی صبر کنید...", show_alert: false });
-    return true;
+    if (callbackQuery && callbackQuery.id) {
+      bot.answerCallbackQuery(callbackQuery.id, {
+        text: "⏳ لطفاً کمی صبر کنید...",
+        show_alert: false,
+      });
+    }
+    return true; // یعنی اسپمه
   }
-  return false;
+
+  return false; // مشکلی نیست
 }
 
 const allRanks = [
@@ -114,9 +123,6 @@ function sendRankTypeSelection(bot, chatId) {
 
 // دکمه انتخاب رنک
 function sendRankSelection(bot, chatId, step = "start") {
-  const state = userRankState[chatId];
-  // اگر این مرحله قبلاً پر شده، دوباره سوال نپرس
-  if ((step === "start" && state.currentStage) || (step !== "start" && state.targetStage)) return;
   const rows = [];
   for (let i = 0; i < allRanks.length; i += 2) {
     const row = [
@@ -127,7 +133,8 @@ function sendRankSelection(bot, chatId, step = "start") {
     ];
     if (allRanks[i + 1]) {
       row.push({
-        text: allRanks[i + , "_")}`
+        text: allRanks[i + 1].name,
+        callback_data: `rank_stage_${allRanks[i + 1].name.replace(/ /g, "_")}`
       });
     }
     rows.push(row);
@@ -140,16 +147,16 @@ function sendRankSelection(bot, chatId, step = "start") {
 }
 
 // دکمه انتخاب ساب رنک (درصورت داشتن)
-function sendSubRanks(bot, chatId, rank, target = false) {
-  const state = userRankState[chatId];
-  // اگر این مرحله قبلاً پر شده، دوباره سوال نپرس
-  if ((target && state.targetSub) || (!target && state.currentSub)) return;
+function sendSubRanks(bot, chatId, rank) {
   const found = allRanks.find(r => r.name === rank);
   const subs = found ? found.sub : [];
   if (!subs.length) {
-    if (!target) state.currentSub = null;
-    else state.targetSub = null;
-    return sendStarSelection(bot, chatId, rank, target ? "target" : "current");
+    if (!userRankState[chatId].currentSub) {
+      userRankState[chatId].currentSub = null;
+    } else {
+      userRankState[chatId].targetSub = null;
+    }
+    return sendStarSelection(bot, chatId, rank);
   }
   const buttons = subs.map(s => [{ text: s, callback_data: `rank_sub_${s}` }]);
   bot.sendMessage(chatId, `🎖 رنک ${rank} را دقیق‌تر مشخص کنید:`, {
@@ -159,9 +166,6 @@ function sendSubRanks(bot, chatId, rank, target = false) {
 
 // دکمه انتخاب ستاره (همه رنک‌ها بجز Immortal)
 function sendStarSelection(bot, chatId, rank, step = "current") {
-  const state = userRankState[chatId];
-  // اگر این مرحله قبلاً پر شده، دوباره سوال نپرس
-  if ((step === "current" && state.currentStars) || (step === "target" && state.targetStars)) return;
   const found = allRanks.find(r => r.name === rank);
   let minStars = 1, maxStars = (found && found.stars) ? found.stars : 5;
   if (rank === "Immortal") {
@@ -190,8 +194,6 @@ function sendStarSelection(bot, chatId, rank, step = "current") {
 
 // دکمه وین‌ریت
 function sendWinrateSelection(bot, chatId) {
-  const state = userRankState[chatId];
-  if (state.winrate) return;
   const options = [40, 50, 60, 70, 80, 90, 100];
   const buttons = [];
   for (let i = 0; i < options.length; i += 2) {
@@ -207,11 +209,14 @@ function sendWinrateSelection(bot, chatId) {
 }
 
 // اعلام نتیجه و بستن همه دکمه‌ها
-function finalizeRankCalc(bot, userId, isCustom, replyToMessageId, setCooldown) {
+function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
   const state = userRankState[userId];
   const {
     currentStage, currentSub, currentStars,
-    targetStage, targetSub, target = getAccurateStarDiff(
+    targetStage, targetSub, targetStars, winrate
+  } = state;
+
+  const starDiff = getAccurateStarDiff(
     currentStage, currentSub, currentStars,
     targetStage, targetSub, targetStars
   );
@@ -236,12 +241,10 @@ function finalizeRankCalc(bot, userId, isCustom, replyToMessageId, setCooldown) 
   closeAllInline(bot, userId);
   bot.sendMessage(userId, msg);
   delete userRankState[userId];
-  // فقط اینجا محدودیت رو ثبت کن
-  if (setCooldown) setCooldown(userId);
 }
 
 // هندل دکمه‌ها (آنتی اسپم فقط اینجاست!)
-function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId, setCooldown) {
+function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) {
   if (rankAntispam(userId, callbackQuery, bot)) return;
 
   if (!userRankState[userId]) userRankState[userId] = {};
@@ -259,16 +262,12 @@ function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId, 
     if (!state.currentStage) {
       state.currentStage = rank;
       state.step = "currentSub";
-      sendSubRanks(bot, userId, rank, false);
-      return;
-    }
-    if (!state.targetStage) {
+      sendSubRanks(bot, userId, rank);
+    } else if (!state.targetStage) {
       state.targetStage = rank;
       state.step = "targetSub";
-      sendSubRanks(bot, userId, rank, true);
-      return;
+      sendSubRanks(bot, userId, rank);
     }
-    // اگر هر دو مقدار بود، کاری نکن
     return;
   }
 
@@ -277,14 +276,11 @@ function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId, 
     if (!state.currentSub) {
       state.currentSub = sub;
       state.step = "currentStars";
-      sendStarSelection(bot, userId, state.currentStage, "current");
-      return;
-    }
-    if (!state.targetSub) {
+      sendStarSelection(bot, userId, state.currentStage);
+    } else if (!state.targetSub) {
       state.targetSub = sub;
       state.step = "targetStars";
       sendStarSelection(bot, userId, state.targetStage, "target");
-      return;
     }
     return;
   }
@@ -295,16 +291,13 @@ function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId, 
       state.currentStars = star;
       state.step = "targetRank";
       sendRankSelection(bot, userId, "target");
-      return;
-    }
-    if (!state.targetStars) {
+    } else if (!state.targetStars) {
       state.targetStars = star;
       if (state.type === "custom") {
         sendWinrateSelection(bot, userId);
       } else {
-        finalizeRankCalc(bot, userId, false, replyToMessageId, setCooldown);
+        finalizeRankCalc(bot, userId, false, replyToMessageId);
       }
-      return;
     }
     return;
   }
@@ -312,13 +305,13 @@ function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId, 
   if (data.startsWith("rank_winrate_")) {
     const wr = parseInt(data.replace("rank_winrate_", ""));
     state.winrate = wr;
-    finalizeRankCalc(bot, userId, true, replyToMessageId, setCooldown);
+    finalizeRankCalc(bot, userId, true, replyToMessageId);
     return;
   }
 }
 
 // هندل پیام متنی (برای Immortal)
-function handleTextMessage(bot, msg, setCooldown) {
+function handleTextMessage(bot, msg) {
   const chatId = msg.chat.id;
   const state = userRankState[chatId];
   if (!state) return;
@@ -339,7 +332,7 @@ function handleTextMessage(bot, msg, setCooldown) {
       if (state.type === "custom") {
         sendWinrateSelection(bot, chatId);
       } else {
-        finalizeRankCalc(bot, chatId, false, msg.message_id, setCooldown);
+        finalizeRankCalc(bot, chatId, false, msg.message_id);
       }
     }
     return;
@@ -356,7 +349,7 @@ function handleTextMessage(bot, msg, setCooldown) {
     if (state.type === "custom") {
       sendWinrateSelection(bot, chatId);
     } else {
-      finalizeRankCalc(bot, chatId, false, msg.message_id, setCooldown);
+      finalizeRankCalc(bot, chatId, false, msg.message_id);
     }
     return;
   }
