@@ -16,13 +16,6 @@ const allRanks = [
   { name: "Immortal", sub: [], stars: null }
 ];
 
-// ذخیره پیام دکمه‌دار برای بستن همگانی
-function saveInlineMsg(userId, messageId) {
-  if (!userInlineMessages[userId]) userInlineMessages[userId] = [];
-  if (!userInlineMessages[userId].includes(messageId))
-    userInlineMessages[userId].push(messageId);
-}
-
 // بستن همه دکمه‌های شیشه‌ای کاربر (پس از اتمام محاسبه)
 function closeAllInline(bot, userId) {
   if (userInlineMessages[userId]) {
@@ -94,11 +87,10 @@ function sendRankTypeSelection(bot, chatId) {
     }
   }).then(sent => saveInlineMsg(chatId, sent.message_id));
 }
+console.log('sendRankTypeSelection', chatId, Date.now());
 
 // دکمه انتخاب رنک
 function sendRankSelection(bot, chatId, step = "start") {
-  const state = userRankState[chatId] || {};
-  if ((step === "start" && state.currentStage) || (step === "target" && state.targetStage)) return;
   const rows = [];
   for (let i = 0; i < allRanks.length; i += 2) {
     const row = [
@@ -123,15 +115,16 @@ function sendRankSelection(bot, chatId, step = "start") {
 }
 
 // دکمه انتخاب ساب رنک (درصورت داشتن)
-function sendSubRanks(bot, chatId, rank, step = "current") {
-  const state = userRankState[chatId] || {};
-  if ((step === "current" && state.currentSub) || (step === "target" && state.targetSub)) return;
+function sendSubRanks(bot, chatId, rank) {
   const found = allRanks.find(r => r.name === rank);
   const subs = found ? found.sub : [];
   if (!subs.length) {
-    if (step === "current") state.currentSub = null;
-    else state.targetSub = null;
-    return sendStarSelection(bot, chatId, rank, step);
+    if (!userRankState[chatId].currentSub) {
+      userRankState[chatId].currentSub = null;
+    } else {
+      userRankState[chatId].targetSub = null;
+    }
+    return sendStarSelection(bot, chatId, rank);
   }
   const buttons = subs.map(s => [{ text: s, callback_data: `rank_sub_${s}` }]);
   bot.sendMessage(chatId, `🎖 رنک ${rank} را دقیق‌تر مشخص کنید:`, {
@@ -141,8 +134,6 @@ function sendSubRanks(bot, chatId, rank, step = "current") {
 
 // دکمه انتخاب ستاره (همه رنک‌ها بجز Immortal)
 function sendStarSelection(bot, chatId, rank, step = "current") {
-  const state = userRankState[chatId] || {};
-  if ((step === "current" && state.currentStars) || (step === "target" && state.targetStars)) return;
   const found = allRanks.find(r => r.name === rank);
   let minStars = 1, maxStars = (found && found.stars) ? found.stars : 5;
   if (rank === "Immortal") {
@@ -171,8 +162,6 @@ function sendStarSelection(bot, chatId, rank, step = "current") {
 
 // دکمه وین‌ریت
 function sendWinrateSelection(bot, chatId) {
-  const state = userRankState[chatId] || {};
-  if (state.winrate) return;
   const options = [40, 50, 60, 70, 80, 90, 100];
   const buttons = [];
   for (let i = 0; i < options.length; i += 2) {
@@ -185,6 +174,13 @@ function sendWinrateSelection(bot, chatId) {
   bot.sendMessage(chatId, "🎯 وین‌ریت دلخواه خود را انتخاب کنید:", {
     reply_markup: { inline_keyboard: buttons }
   }).then(sent => saveInlineMsg(chatId, sent.message_id));
+}
+
+// محاسبه تعداد برد لازم
+function calculateWinsNeeded(stars, winrate) {
+  const wr = winrate / 100;
+  const gamesNeeded = Math.ceil(stars / wr);
+  return { neededStars: stars, gamesNeeded };
 }
 
 // اعلام نتیجه و بستن همه دکمه‌ها
@@ -222,10 +218,12 @@ function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
   delete userRankState[userId];
 }
 
+
 // هندل دکمه‌ها
 function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) {
   if (!userRankState[userId]) userRankState[userId] = {};
   const state = userRankState[userId];
+  console.log('handleRankCallback', userId, data, Date.now());
 
   if (data === "rank_calc_basic" || data === "rank_calc_customwin") {
     state.type = data === "rank_calc_customwin" ? "custom" : "basic";
@@ -239,11 +237,11 @@ function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) 
     if (!state.currentStage) {
       state.currentStage = rank;
       state.step = "currentSub";
-      sendSubRanks(bot, userId, rank, "current");
+      sendSubRanks(bot, userId, rank);
     } else if (!state.targetStage) {
       state.targetStage = rank;
       state.step = "targetSub";
-      sendSubRanks(bot, userId, rank, "target");
+      sendSubRanks(bot, userId, rank);
     }
     return;
   }
@@ -253,7 +251,7 @@ function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) 
     if (!state.currentSub) {
       state.currentSub = sub;
       state.step = "currentStars";
-      sendStarSelection(bot, userId, state.currentStage, "current");
+      sendStarSelection(bot, userId, state.currentStage);
     } else if (!state.targetSub) {
       state.targetSub = sub;
       state.step = "targetStars";
@@ -312,23 +310,16 @@ function handleTextMessage(bot, msg) {
       }
     }
     return;
-  }
-  if (state.awaitingImmortalTarget) {
-    const value = parseInt(msg.text);
-    if (isNaN(value) || value < 1 || value > 999) {
-      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
-    }
-    delete state.awaitingImmortalTarget;
-    state.targetStars = value;
-    if (state.type === "custom") {
-      sendWinrateSelection(bot, chatId);
-    } else {
-      finalizeRankCalc(bot, chatId, false, msg.message_id);
-    }
-    return;
+if (data.type === "custom") {
+  sendWinrateSelection(bot, chatId);
+} else {
+  finalizeRankCalc(bot, chatId, false, msg.message_id);
+}
+return;
   }
 }
 
+// خروجی ماژول
 module.exports = {
   userRankState,
   sendRankTypeSelection,
