@@ -87,7 +87,6 @@ function sendRankTypeSelection(bot, chatId) {
     }
   }).then(sent => saveInlineMsg(chatId, sent.message_id));
 }
-console.log('sendRankTypeSelection', chatId, Date.now());
 
 // دکمه انتخاب رنک
 function sendRankSelection(bot, chatId, step = "start") {
@@ -223,7 +222,6 @@ function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
 function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) {
   if (!userRankState[userId]) userRankState[userId] = {};
   const state = userRankState[userId];
-  console.log('handleRankCallback', userId, data, Date.now());
 
   if (data === "rank_calc_basic" || data === "rank_calc_customwin") {
     state.type = data === "rank_calc_customwin" ? "custom" : "basic";
