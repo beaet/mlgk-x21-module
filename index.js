@@ -1258,7 +1258,7 @@ if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
       }
       userState[userId] = { type: data === 'calculate_rate' ? 'rate' : 'w/l', step: 'total' };
       await bot.answerCallbackQuery(query.id);
-      return bot.sendMessage(userId, 'تعداد کل بازی‌ها را وارد کن:');
+      return bot.sendMessage(userId, '🍃 تعداد کل بازی‌ ها را به صورت عدد وارد کنید\\:\n\n🌟 با انجام این محاسبه، 1 امتیاز از حساب شما کسر خواهد شد');
     case 'add_points_all':
       if (userId !== adminId) {
         await bot.answerCallbackQuery(query.id, { text: 'دسترسی ندارید.', show_alert: true });
@@ -1603,24 +1603,23 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
   // ---- User steps for calculations ----
   if (state.step === 'total') {
     const total = parseInt(text);
-    if (isNaN(total) || total <= 0) return bot.sendMessage(userId, '❗️تعداد کل بازی‌ها را به صورت عدد انگلیسی وارد کن.\n🌟 با انجام این محاسبه، 1 امتیاز از حساب شما کسر خواهد شد');
+    if (isNaN(total) || total <= 0) return bot.sendMessage(userId, '❗️تعداد کل بازی‌ها را به صورت عدد انگلیسی وارد کنید');
     state.total = total;
     state.step = 'rate';
-    return bot.sendMessage(userId, '📊 لطفاً **ریت فعلی** خود را وارد کنید (مثلاً 55)');
-  }
-  if (state.step === 'rate') {
-  const rate = parseFloat(text);
-  if (isNaN(rate) || rate < 0 || rate > 100) 
-    return bot.sendMessage(userId, '⚠️ درصد ریت را به صورت عدد بین 0 تا 100 وارد کنید');
-    
-  if (state.type === 'rate') {
-    state.rate = rate;
-    state.step = 'target';
-    return bot.sendMessage(userId, '🎯 لطفاً *ریت\\ هدف* خود را وارد کنید\\.\n⚠️ توجه: با انجام این محاسبه، ۱ امتیاز از حساب شما کسر می‌شود\\.', {
+    return bot.sendMessage(userId, '📊 لطفاً **ریت\\ فعلی** خود را وارد کنید \مثلاً 55\', {
   parse_mode: 'MarkdownV2'
 });
-  } else {
-    const wins = Math.round((state.total * rate) / 100);
+  if (state.step === 'rate') {
+    const rate = parseFloat(text);
+    if (isNaN(rate) || rate < 0 || rate > 100) return bot.sendMessage(userId, '⚠️ درصد ریت را به صورت عدد بین 0 تا 100 وارد کنید');
+    if (state.type === 'rate') {
+      state.rate = rate;
+      state.step = 'target';
+      return bot.sendMessage(userId, '🎯 لطفاً **ریت\\ هدف** خود را وارد کنید\\:', {
+  parse_mode: 'MarkdownV2'
+});
+    } else {
+      const wins = Math.round((state.total * rate) / 100);
       const losses = state.total - wins;
       await updatePoints(userId, -1);
       userState[userId] = null;
