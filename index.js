@@ -1609,8 +1609,8 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
   state.total = total;
   state.step = 'rate';
 
-  return bot.sendMessage(userId, '📊 لطفاً *ریت فعلی* خود را وارد کنید، مثلا 55', {
-    parse_mode: 'Markdown'
+  return bot.sendMessage(userId, '📊 لطفاً *ریت\\ فعلی* خود را وارد کنید\\، مثلا \\55\\.\n⚠️ توجه: با انجام این محاسبه، 1 امتیاز از حساب شما کسر خواهد شد\\.', {
+    parse_mode: 'MarkdownV2'
   });
 }
 
@@ -1623,8 +1623,8 @@ if (state.step === 'rate') {
     state.rate = rate;
     state.step = 'target';
 
-    return bot.sendMessage(userId, '🎯 لطفاً *ریت هدف* خود را وارد کنید:', {
-      parse_mode: 'Markdown'
+    return bot.sendMessage(userId, '🎯 لطفاً *ریت\\ هدف* خود را وارد کنید\\.\n⚠️ توجه: با انجام این محاسبه، 1 امتیاز از حساب شما کسر خواهد شد\\.', {
+      parse_mode: 'MarkdownV2'
     });
 
   } else {
@@ -1634,7 +1634,9 @@ if (state.step === 'rate') {
     await updatePoints(userId, -1);
     userState[userId] = null;
 
-    return bot.sendMessage(userId, `🏆 برد: ${wins} | ❌ باخت: ${losses}\n💰 امتیاز باقی‌مانده: ${user.points - 1}`);
+    return bot.sendMessage(userId, `🏆 برد: *${wins}* | ❌ باخت: *${losses}*\n💰 امتیاز باقی‌مانده: *${user.points - 1}*`, {
+      parse_mode: 'MarkdownV2'
+    });
   }
 }
 
@@ -1649,7 +1651,9 @@ if (state.step === 'target') {
   await updatePoints(userId, -1);
   userState[userId] = null;
 
-  return bot.sendMessage(userId, `📈 برای رسیدن به ${target}% باید ${neededWins} بازی متوالی ببری.\n💰 امتیاز باقی‌مانده: ${user.points - 1}`);
+  return bot.sendMessage(userId, `📈 برای رسیدن به *${target}\\%* باید *${neededWins}* بازی متوالی ببری\\.\n💰 امتیاز باقی‌مانده: *${user.points - 1}*`, {
+    parse_mode: 'MarkdownV2'
+  });
 }
   if (state.step === 'support') {
     if (msg.message_id && text.length > 0) {
