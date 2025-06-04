@@ -434,7 +434,6 @@ const now = Date.now();
   const chat_id = query.message.chat.id;
   const messageId = query.message.message_id;
   const message_id = query.message.message_id; // این خط درست و کافی است
-rank.handleRankCallback(bot, userId, data, query, adminMode, adminId);
 
   const blockedBtn = MENU_BUTTONS.find(btn => btn.key === data);
   if (blockedBtn && !(await isButtonEnabled(data)) && userId !== adminId) {
