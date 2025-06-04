@@ -1262,7 +1262,9 @@ if (data.startsWith('squaddelete_nopoints_') && userId === adminId) {
       }
       userState[userId] = { type: data === 'calculate_rate' ? 'rate' : 'w/l', step: 'total' };
       await bot.answerCallbackQuery(query.id);
-return bot.sendMessage(userId, '🍃 تعداد کل بازی‌ ها را به صورت عدد وارد کنید:\n\n🌟 با انجام این محاسبه، 1 امتیاز از حساب شما کسر خواهد شد');
+return bot.sendMessage(userId, '🍃 لطفاً *تعداد کل بازی‌ها* را به صورت عدد وارد کنید:\n\n🌟 با انجام این محاسبه، 1 امتیاز از حساب شما کسر خواهد شد\\.', {
+  parse_mode: 'MarkdownV2'
+});
     case 'add_points_all':
       if (userId !== adminId) {
         await bot.answerCallbackQuery(query.id, { text: 'دسترسی ندارید.', show_alert: true });
