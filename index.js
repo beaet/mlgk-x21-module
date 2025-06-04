@@ -99,6 +99,10 @@ async function setHelpText(newText) {
   await set(settingsRef('help_text'), newText);
 }
 
+function escapeMarkdownV2(text) {
+  return text.toString().replace(/([_*()~`>#+=|{}.!\\-])/g, '\\$1');
+}
+
 async function getAllUsersFromDatabase() {
   // مثلا نمونه برای SQLite:
   return new Promise((resolve, reject) => {
