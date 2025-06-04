@@ -314,12 +314,12 @@ function handleTextMessage(bot, msg) {
       }
     }
     return;
-.type === "custom") {
-      sendWinrateSelection(bot, chatId);
-    } else {
-      finalizeRankCalc(bot, chatId, false, msg.message_id);
-    }
-    return;
+if (data.type === "custom") {
+  sendWinrateSelection(bot, chatId);
+} else {
+  finalizeRankCalc(bot, chatId, false, msg.message_id);
+}
+return;
   }
 }
 
