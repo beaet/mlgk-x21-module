@@ -1,7 +1,6 @@
 // rank.js
 
 const userRankState = {}; // وضعیت هر کاربر برای روند محاسبه
-const userSpamTimes = {}; // آنتی اسپم سبک
 const userInlineMessages = {}; // پیام‌های دکمه‌دار هر کاربر
 
 const allRanks = [
@@ -17,16 +16,6 @@ const allRanks = [
   { name: "Immortal", sub: [], stars: null }
 ];
 
-// آنتی اسپم بسیار سبک (۲ ثانیه)
-function checkSpam(userId, callbackQuery, bot) {
-  if (userSpamTimes[userId] && Date.now() - userSpamTimes[userId] < 2000) {
-    if (callbackQuery && callbackQuery.id)
-      bot.answerCallbackQuery(callbackQuery.id, { text: "⏳ لطفاً کمی صبر کنید...", show_alert: false });
-    return true;
-  }
-  userSpamTimes[userId] = Date.now();
-  return false;
-}
 
 // ذخیره پیام دکمه‌دار برای بستن همگانی
 function saveInlineMsg(userId, messageId) {
