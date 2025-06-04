@@ -866,23 +866,24 @@ if (data === 'profile') {
   const rank = teammateProfile.rank || 'نامشخص';
   const mainHero = teammateProfile.mainHero || 'نامشخص';
   const mainRole = teammateProfile.mainRole || 'نامشخص';
-  const gameId = teammateProfile.gameId || 'اختیاری/نامشخص';
+  const gameId = teammateProfile.gameId || 'نامشخص';
   let profileMessage = 
-    `🆔 آیدی عددی: ${userId}\n` +
-    `⭐ امتیاز فعلی: ${user.points}\n` +
-    `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
-    `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
-    `🏅 رنک: ${rank}\n` +
-    `🦸‍♂️ هیرو مین: ${mainHero}\n` +
-    `🎯 رول اصلی: ${mainRole}\n` +
-    `🎮 آیدی یا اسم گیم: ${gameId}`;
-  return bot.sendMessage(userId, profileMessage, {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: '✏️ ویرایش اطلاعات بازیکن', callback_data: 'find_teammate_profile' }]
-      ]
-    }
-  });
+  `🆔 آیدی عددی: ${userId}\n` +
+  `⭐ امتیاز فعلی: ${user.points}\n` +
+  `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
+  `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n\n` +  // 👈 خط فاصله
+  `🏅 رنک: ${rank}\n` +
+  `🦸‍♂️ هیرو مین: ${mainHero}\n` +
+  `🎯 رول اصلی: ${mainRole}\n` +
+  `🎮 آیدی یا اسم گیم: ${gameId}`;
+
+return bot.sendMessage(userId, profileMessage, {
+  reply_markup: {
+    inline_keyboard: [
+      [{ text: '✏️ ویرایش اطلاعات بازیکن', callback_data: 'find_teammate_profile' }]
+    ]
+  }
+});
 }
 
   // ---- لیست پیک/بن ----
