@@ -16,13 +16,6 @@ const allRanks = [
   { name: "Immortal", sub: [], stars: null }
 ];
 
-// ذخیره پیام دکمه‌دار برای بستن همگانی
-function saveInlineMsg(userId, messageId) {
-  if (!userInlineMessages[userId]) userInlineMessages[userId] = [];
-  if (!userInlineMessages[userId].includes(messageId))
-    userInlineMessages[userId].push(messageId);
-}
-
 // بستن همه دکمه‌های شیشه‌ای کاربر (پس از اتمام محاسبه)
 function closeAllInline(bot, userId) {
   if (userInlineMessages[userId]) {
@@ -223,6 +216,7 @@ function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
   bot.sendMessage(userId, msg);
   delete userRankState[userId];
 }
+
 
 // هندل دکمه‌ها
 function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) {
