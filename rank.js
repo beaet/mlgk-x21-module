@@ -16,7 +16,6 @@ const allRanks = [
   { name: "Immortal", sub: [], stars: null }
 ];
 
-
 // ذخیره پیام دکمه‌دار برای بستن همگانی
 function saveInlineMsg(userId, messageId) {
   if (!userInlineMessages[userId]) userInlineMessages[userId] = [];
@@ -227,7 +226,6 @@ function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
 
 // هندل دکمه‌ها
 function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) {
-
   if (!userRankState[userId]) userRankState[userId] = {};
   const state = userRankState[userId];
 
@@ -316,15 +314,7 @@ function handleTextMessage(bot, msg) {
       }
     }
     return;
-  }
-  if (state.awaitingImmortalTarget) {
-    const value = parseInt(msg.text);
-    if (isNaN(value) || value < 1 || value > 999) {
-      return bot.sendMessage(chatId, "❌ لطفاً یک عدد معتبر بین 1 تا 999 وارد کنید (مثلاً 12).");
-    }
-    delete state.awaitingImmortalTarget;
-    state.targetStars = value;
-    if (state.type === "custom") {
+.type === "custom") {
       sendWinrateSelection(bot, chatId);
     } else {
       finalizeRankCalc(bot, chatId, false, msg.message_id);
