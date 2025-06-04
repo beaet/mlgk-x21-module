@@ -11,8 +11,8 @@ const allRanks = [
   { name: "Epic", sub: ["IV", "III", "II", "I"], stars: 5 },
   { name: "Legend", sub: ["IV", "III", "II", "I"], stars: 5 },
   { name: "Mythic", sub: [], stars: 24 },
-  { name: "Mythical Honor", sub: [], stars: 25 },
-  { name: "Glorious Mythic", sub: [], stars: 50 },
+  { name: "Mythical Honor", sub: [], stars: 25 }, // فقط برای نشانه‌گذاری
+  { name: "Glorious Mythic", sub: [], stars: 50 }, // فقط برای نشانه‌گذاری
   { name: "Immortal", sub: [], stars: null }
 ];
 
@@ -41,27 +41,21 @@ function getAllRankStates() {
   let list = [];
   for (const rank of allRanks) {
     if (rank.sub.length) {
-      for (let sub of rank.sub) {
-        for (let star = 1; star <= rank.stars; star++) {
+      for (let sub of rank.sub)
+        for (let star = 1; star <= rank.stars; star++)
           list.push({ rank: rank.name, sub, star });
-        }
-      }
     } else if (rank.name === "Mythic") {
-      for (let star = 1; star <= 24; star++) {
+      for (let star = 1; star <= 24; star++)
         list.push({ rank: "Mythic", sub: null, star });
-      }
     } else if (rank.name === "Mythical Honor") {
-      for (let star = 25; star <= 49; star++) {
+      for (let star = 25; star <= 49; star++)
         list.push({ rank: "Mythical Honor", sub: null, star });
-      }
     } else if (rank.name === "Glorious Mythic") {
-      for (let star = 50; star <= 99; star++) {
+      for (let star = 50; star <= 99; star++)
         list.push({ rank: "Glorious Mythic", sub: null, star });
-      }
     } else if (rank.name === "Immortal") {
-      for (let star = 1; star <= 999; star++) {
+      for (let star = 1; star <= 999; star++)
         list.push({ rank: "Immortal", sub: null, star });
-      }
     }
   }
   return list;
