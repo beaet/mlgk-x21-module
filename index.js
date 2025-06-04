@@ -1616,9 +1616,9 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
   if (state.type === 'rate') {
     state.rate = rate;
     state.step = 'target';
-    return bot.sendMessage(userId, '🎯 لطفاً *ریت هدف* خود را وارد کنید:', {
-      parse_mode: 'Markdown'
-    });
+    return bot.sendMessage(userId, '🎯 لطفاً *ریت\\ هدف* خود را وارد کنید\\.\n⚠️ توجه: با انجام این محاسبه، ۱ امتیاز از حساب شما کسر می‌شود\\.', {
+  parse_mode: 'MarkdownV2'
+});
   } else {
     const wins = Math.round((state.total * rate) / 100);
       const losses = state.total - wins;
