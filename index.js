@@ -1612,9 +1612,9 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
   }
   state.total = total;
   state.step = 'rate';
-  return bot.sendMessage(userId, '📊 لطفاً *ریت\\ فعلی* خود را وارد کنید\\، مثلا \\55\\.', {
-    parse_mode: 'MarkdownV2'
-  });
+  return bot.sendMessage(userId, '📊 لطفاً *ریت فعلی* خود را وارد کنید، مثلا 55.', {
+  parse_mode: 'MarkdownV2'
+});
 }
 
 if (state.step === 'rate') {
