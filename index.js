@@ -1605,43 +1605,56 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
   const total = parseInt(text);
   if (isNaN(total) || total <= 0)
     return bot.sendMessage(userId, '❗️تعداد کل بازی‌ها را به صورت عدد انگلیسی وارد کنید');
+
   state.total = total;
   state.step = 'rate';
-  return bot.sendMessage(userId, '📊 لطفاً **ریت فعلی** خود را وارد کنید، مثلا 55', {
-  parse_mode: 'MarkdownV2'
-});
+
+  return bot.sendMessage(userId, '📊 لطفاً **ریت فعلی** خود را وارد کنید\\، مثلا 55', {
+    parse_mode: 'MarkdownV2'
+  });
 }
 
 if (state.step === 'rate') {
   const rate = parseFloat(text);
   if (isNaN(rate) || rate < 0 || rate > 100)
     return bot.sendMessage(userId, '⚠️ درصد ریت را به صورت عدد بین 0 تا 100 وارد کنید');
-  
+
   if (state.type === 'rate') {
     state.rate = rate;
     state.step = 'target';
-    return bot.sendMessage(userId, '🎯 لطفاً **ریت هدف** خود را وارد کنید:', {
-  parse_mode: 'MarkdownV2'
-});
+
+    return bot.sendMessage(userId, '🎯 لطفاً **ریت هدف** خود را وارد کنید\\:', {
+      parse_mode: 'MarkdownV2'
+    });
+
   } else {
     const wins = Math.round((state.total * rate) / 100);
     const losses = state.total - wins;
+
     await updatePoints(userId, -1);
     userState[userId] = null;
-    bot.sendMessage(userId, `🏆 برد: ${wins} | ❌ باخت: ${losses}\n💰 امتیاز باقی‌مانده: ${user.points - 1}`);
-    sendMainMenu(userId);
+
+    return bot.sendMessage(userId, `🏆 برد\\: ${wins} \\| ❌ باخت\\: ${losses}\n💰 امتیاز باقی‌مانده\\: ${user.points - 1}`, {
+      parse_mode: 'MarkdownV2'
+    });
   }
 }
-  if (state.step === 'target') {
-    const target = parseFloat(text);
-    if (isNaN(target) || target < 0 || target > 100) return bot.sendMessage(userId, '⚠️ درصد ریت هدف را به صورت عدد بین 0 تا 100 وارد کنید');
-    const currentWins = (state.total * state.rate) / 100;
-    const neededWins = Math.ceil(((target / 100 * state.total) - currentWins) / (1 - target / 100));
-    await updatePoints(userId, -1);
-    userState[userId] = null;
-    bot.sendMessage(userId, `📈 برای رسیدن به ${target}% باید ${neededWins} بازی متوالی ببری.\n💰 امتیاز باقی‌مانده: ${user.points - 1}`);
-    sendMainMenu(userId);
-  }
+
+if (state.step === 'target') {
+  const target = parseFloat(text);
+  if (isNaN(target) || target < 0 || target > 100)
+    return bot.sendMessage(userId, '⚠️ درصد ریت هدف را به صورت عدد بین 0 تا 100 وارد کنید');
+
+  const currentWins = (state.total * state.rate) / 100;
+  const neededWins = Math.ceil(((target / 100 * state.total) - currentWins) / (1 - target / 100));
+
+  await updatePoints(userId, -1);
+  userState[userId] = null;
+
+  return bot.sendMessage(userId, `📈 برای رسیدن به ${target}\\% باید ${neededWins} بازی متوالی ببری\\.\n💰 امتیاز باقی‌مانده\\: ${user.points - 1}`, {
+    parse_mode: 'MarkdownV2'
+  });
+}
   if (state.step === 'support') {
     if (msg.message_id && text.length > 0) {
       try {
