@@ -227,7 +227,6 @@ function finalizeRankCalc(bot, userId, isCustom, replyToMessageId) {
 
 // هندل دکمه‌ها
 function handleRankCallback(bot, userId, data, callbackQuery, replyToMessageId) {
-  if (checkSpam(userId, callbackQuery, bot)) return;
 
   if (!userRankState[userId]) userRankState[userId] = {};
   const state = userRankState[userId];
