@@ -1609,14 +1609,18 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
     return bot.sendMessage(userId, '📊 لطفاً **ریت فعلی** خود را وارد کنید (مثلاً 55)');
   }
   if (state.step === 'rate') {
-    const rate = parseFloat(text);
-    if (isNaN(rate) || rate < 0 || rate > 100) return bot.sendMessage(userId, '⚠️ درصد ریت را به صورت عدد بین 0 تا 100 وارد کنید');
-    if (state.type === 'rate') {
-      state.rate = rate;
-      state.step = 'target';
-      return bot.sendMessage(userId, '🎯 لطفاً **ریت هدف** خود را وارد کنید:');
-    } else {
-      const wins = Math.round((state.total * rate) / 100);
+  const rate = parseFloat(text);
+  if (isNaN(rate) || rate < 0 || rate > 100) 
+    return bot.sendMessage(userId, '⚠️ درصد ریت را به صورت عدد بین 0 تا 100 وارد کنید');
+    
+  if (state.type === 'rate') {
+    state.rate = rate;
+    state.step = 'target';
+    return bot.sendMessage(userId, '🎯 لطفاً *ریت هدف* خود را وارد کنید:', {
+      parse_mode: 'Markdown'
+    });
+  } else {
+    const wins = Math.round((state.total * rate) / 100);
       const losses = state.total - wins;
       await updatePoints(userId, -1);
       userState[userId] = null;
