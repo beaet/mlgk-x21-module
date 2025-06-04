@@ -1609,7 +1609,7 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
   state.total = total;
   state.step = 'rate';
 
-  return bot.sendMessage(userId, '📊 لطفاً *ریت\\ فعلی* خود را وارد کنید\\، مثلا \\55\\.', {
+  return bot.sendMessage(userId, '📊 لطفاً *ریت\\ فعلی* خود را وارد کنید\\، مثلا \\55\\.\n⚠️ توجه: با انجام این محاسبه، 1 امتیاز از حساب شما کسر خواهد شد\\.', {
     parse_mode: 'MarkdownV2'
   });
 }
@@ -1623,7 +1623,7 @@ if (state.step === 'rate') {
     state.rate = rate;
     state.step = 'target';
 
-    return bot.sendMessage(userId, '🎯 لطفاً *ریت\\ هدف* خود را وارد کنید\\.', {
+    return bot.sendMessage(userId, '🎯 لطفاً *ریت\\ هدف* خود را وارد کنید\\.\n⚠️ توجه: با انجام این محاسبه، 1 امتیاز از حساب شما کسر خواهد شد\\.', {
       parse_mode: 'MarkdownV2'
     });
 
@@ -1632,11 +1632,9 @@ if (state.step === 'rate') {
     const losses = state.total - wins;
 
     await updatePoints(userId, -1);
-    const user = await getUser(userId); // مقدار جدید امتیاز را بگیر
-
     userState[userId] = null;
 
-    return bot.sendMessage(userId, `🏆 برد: *${wins}* | ❌ باخت: *${losses}*\n💰 امتیاز باقی‌مانده: *${user.points}*`, {
+    return bot.sendMessage(userId, `🏆 برد: *${wins}* | ❌ باخت: *${losses}*\n💰 امتیاز باقی‌مانده: *${user.points - 1}*`, {
       parse_mode: 'MarkdownV2'
     });
   }
@@ -1651,11 +1649,9 @@ if (state.step === 'target') {
   const neededWins = Math.ceil(((target / 100 * state.total) - currentWins) / (1 - target / 100));
 
   await updatePoints(userId, -1);
-  const user = await getUser(userId);
-
   userState[userId] = null;
 
-  return bot.sendMessage(userId, `📈 برای رسیدن به *${target}\\%* باید *${neededWins}* بازی متوالی ببری\\.\n💰 امتیاز باقی‌مانده: *${user.points}*`, {
+  return bot.sendMessage(userId, `📈 برای رسیدن به *${target}\\%* باید *${neededWins}* بازی متوالی ببری\\.\n💰 امتیاز باقی‌مانده: *${user.points - 1}*`, {
     parse_mode: 'MarkdownV2'
   });
 }
