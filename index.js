@@ -99,10 +99,6 @@ async function setHelpText(newText) {
   await set(settingsRef('help_text'), newText);
 }
 
-function escapeMarkdownV2(text) {
-  return text.toString().replace(/([_*()~`>#+=|{}.!\\-])/g, '\\$1');
-}
-
 async function getAllUsersFromDatabase() {
   // مثلا نمونه برای SQLite:
   return new Promise((resolve, reject) => {
@@ -1612,7 +1608,7 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
   }
   state.total = total;
   state.step = 'rate';
-  return bot.sendMessage(userId, '📊 لطفاً *ریت فعلی* خود را وارد کنید، مثلا 55.', {
+  return bot.sendMessage(userId, '📊 لطفاً *ریت فعلی* خود را وارد کنید، مثلا 55', {
   parse_mode: 'MarkdownV2'
 });
 }
