@@ -27,4 +27,24 @@ async function askAI(message) {
   }
 }
 
-module.exports = { askAI };
+/**
+ * ست کردن وضعیت کاربر در دیتابیس
+ * @param {number|string} userId شناسه کاربر
+ * @param {string} state وضعیت جدید
+ */
+async function setUserState(userId, state) {
+  // این تابع باید تو index.js تعریف بشه چون db اونجا هست
+  // پس اینجا فقط ارور نده و می‌تونی از اینجا اینجا تعریف نکنی یا بعداً تعریف کنی
+  throw new Error('setUserState is not implemented');
+}
+
+/**
+ * پاک کردن وضعیت کاربر از دیتابیس
+ * @param {number|string} userId شناسه کاربر
+ */
+async function clearUserState(userId) {
+  // این تابع هم مثل بالا فقط اعلام می‌کنم که وجود داره
+  throw new Error('clearUserState is not implemented');
+}
+
+module.exports = { askAI, setUserState, clearUserState };
