@@ -14,8 +14,7 @@ async function askAI(question) {
         }
       }
     );
-    console.log('COHERE RAW RESPONSE:', JSON.stringify(res.data, null, 2)); // <--- این خط را اضافه کن
-
+    
     // سعی کن همه حالت‌های ممکن خروجی را تست کنی
     if (res.data.text) return res.data.text;
     if (res.data.reply) return res.data.reply;
