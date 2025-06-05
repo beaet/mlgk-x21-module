@@ -96,6 +96,17 @@ async function handleSomeUser(userId) {
 async function updateLastChanceUse(userId, timestamp) {
   await update(userRef(userId), { last_chance_use: timestamp });
 }
+
+async function getUserState(userId) {
+  try {
+    const snapshot = await get(ref(db, `users/${userId}/state`));
+    return snapshot.exists() ? snapshot.val() : null;
+  } catch (e) {
+    console.error('Error getting user state:', e);
+    return null;
+  }
+}
+
 async function setBanStatus(userId, status) {
   await update(userRef(userId), { banned: status ? 1 : 0 });
 }
@@ -1472,31 +1483,34 @@ if (userId === adminId && state && state.step === 'edit_chance_enter_value') {
   }
 }
 
-if (state === 'awaiting_ai_question') {
-  await clearUserState(userId);
+if (!text) return; // اگر پیام متنی نیست رد کن
 
-  const userRef = ref(db, `users/${userId}`);
-  const userSnapshot = await get(userRef);
-  const userData = userSnapshot.exists() ? userSnapshot.val() : {};
-  const today = new Date().toISOString().split('T')[0];
-  const isAdmin = userId === adminId;
+  if (state === 'awaiting_ai_question') {
+    await clearUserState(userId);
+const state = await getUserState(userId);
+    // باقی کد AI که داری
+    const userRef = ref(db, `users/${userId}`);
+    const userSnapshot = await get(userRef);
+    const userData = userSnapshot.exists() ? userSnapshot.val() : {};
+    const today = new Date().toISOString().split('T')[0];
+    const isAdmin = userId === adminId;
 
-  let aiChat = userData.aiChat || { count: 0, lastDate: today };
-  if (aiChat.lastDate !== today) aiChat = { count: 0, lastDate: today };
+    let aiChat = userData.aiChat || { count: 0, lastDate: today };
+    if (aiChat.lastDate !== today) aiChat = { count: 0, lastDate: today };
 
-  if (!isAdmin && aiChat.count >= 2) {
-    return bot.sendMessage(userId, '❌ شما امروز بیش از ۲ سوال پرسیده‌اید.');
+    if (!isAdmin && aiChat.count >= 2) {
+      return bot.sendMessage(userId, '❌ شما امروز بیش از ۲ سوال پرسیده‌اید.');
+    }
+
+    const answer = await askAI(text);
+    await bot.sendMessage(userId, `🤖 پاسخ:\n${answer}`);
+
+    if (!isAdmin) {
+      aiChat.count += 1;
+      aiChat.lastDate = today;
+      await set(ref(db, `users/${userId}/aiChat`), aiChat);
+    }
   }
-
-  const answer = await askAI(text);
-  await bot.sendMessage(userId, `🤖 پاسخ:\n${answer}`);
-
-  if (!isAdmin) {
-    aiChat.count += 1;
-    aiChat.lastDate = today;
-    await set(ref(db, `users/${userId}/aiChat`), aiChat);
-  }
-}
 
   
 if (state && state.step === 'in_anonymous_chat' && state.chatPartner) {
