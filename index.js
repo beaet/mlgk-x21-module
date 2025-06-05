@@ -1384,83 +1384,79 @@ return bot.sendMessage(userId, '🍃 تعداد کل بازی‌ ها را به 
 // ... ناحیه message handler بدون تغییر، فقط بخش stateهای جدید اضافه شود
 bot.on('message', async (msg) => {
   const userId = msg.from.id;
-  const text = msg.text || '';
-  const chatId = msg.chat.id;
   const state = userState[userId];
-
-  if (!text) return; // پیام متنی نیست
-
-  // رد پیام از گروه‌ها
-  if (msg.chat.type !== 'private') return;
-
-  // دریافت اطلاعات کاربر
+  const text = msg.text || '';
+  if (!userState[userId] && !aiAwaiting[userId] && userId !== adminId) return;
   const user = await getUser(userId);
-
-  // اگر بن شده
-  if (user?.banned) {
-    return bot.sendMessage(chatId, '❌ شما بن شده‌اید و اجازه استفاده ندارید.');
-  }
-
-  // اگر ربات غیرفعاله و کاربر ادمین نیست
-  if (!botActive && userId !== adminId) {
-    return bot.sendMessage(chatId, "⛔️ ربات موقتاً خاموش است.");
-  }
-
-  // ===== پردازش پیام‌های در انتظار پاسخ =====
+rank.handleTextMessage(bot, msg, adminMode, adminId);
 
   if (state && state.step === 'ask_rank') {
     state.teammateProfile.rank = text;
     state.step = 'ask_mainHero';
-    return bot.sendMessage(chatId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
+    return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
   }
-
   if (state && state.step === 'ask_mainHero') {
     state.teammateProfile.mainHero = text;
     state.step = 'ask_mainRole';
-    return bot.sendMessage(chatId, '🎯 بیشتر چه رولی پلی می‌دی؟ (مثلا: تانک، ساپورت، مید)');
+    return bot.sendMessage(userId, '🎯 بیشتر چه رولی پلی می‌دی؟ (مثلا: تانک، ساپورت، مید)');
   }
-
   if (state && state.step === 'ask_mainRole') {
     state.teammateProfile.mainRole = text;
     state.step = 'ask_gameId';
-    return bot.sendMessage(chatId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
+    return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
   }
-
   if (state && state.step === 'ask_gameId') {
     state.teammateProfile.gameId = text || 'اختیاری/نامشخص';
     await update(userRef(userId), { teammate_profile: state.teammateProfile });
     userState[userId] = null;
-    return bot.sendMessage(chatId, '✅ اطلاعات شما ذخیره شد! از دکمه پروفایل می‌تونی ببینی.');
+    return bot.sendMessage(userId, '✅ اطلاعات شما ذخیره شد! از دکمه پروفایل می‌تونی ببینی.');
   }
+  
+    if (userState[userId]?.type === 'rank') {
+    await rank.handleImmortalInput(bot, userId, msg.text);
+    return;
+  }
+  
+if (!botActive && msg.from.id !== adminId) {
+    return bot.sendMessage(msg.from.id, "ربات موقتاً خاموش است.");
+  }
+  
+  if (user?.banned) {
+    return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده ندارید.');
+  }
+  
+if (msg.chat.type !== 'private') return;
 
-  // هندل خاص برای حالت rank
-  if (state?.type === 'rank') {
-    await rank.handleImmortalInput(bot, userId, text);
+  // فقط وقتی منتظر سوال AI هستیم (چه ادمین چه کاربر عادی)
+  if (!aiAwaiting[userId]) return;
+
+  // اگر متن پیام وجود ندارد، هندل نشود
+  if (!msg.text) return;
+
+  // محدودیت تعداد کاراکتر (برای همه، حتی ادمین)
+  const maxLength = 270;
+  if (msg.text.length > maxLength) {
+    aiAwaiting[userId] = false; // نوبت مصرف شده لغو شود
+    // اگر کاربر عادی بود quota را برگردان (ادمین quota ندارد)
+    if (userId !== adminId) {
+      const usageRef = ref(db, `ai_usage/${userId}`);
+      const usageSnap = await get(usageRef);
+      let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
+      if (usageData.count > 0) {
+        usageData.count--;
+        await set(usageRef, usageData);
+      }
+    }
+    await bot.sendMessage(userId, `پیام شما بیش از ${maxLength} کاراکتر دارد. لطفاً پیام کوتاه‌تری ارسال کنید. شانس شما بازگشت داده شد.`);
     return;
   }
 
-  // ===== AI Mode =====
-  if (aiAwaiting[userId]) {
-    if (text.length > 270) {
-      aiAwaiting[userId] = false;
-      if (userId !== adminId) {
-        const usageRef = ref(db, `ai_usage/${userId}`);
-        const usageSnap = await get(usageRef);
-        let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
-        if (usageData.count > 0) {
-          usageData.count--;
-          await set(usageRef, usageData);
-        }
-      }
-      return bot.sendMessage(chatId, `⛔️ پیام شما بیش از ۲۷۰ کاراکتر است. لطفاً پیام کوتاه‌تری بفرست. نوبت شما برگشت داده شد.`);
-    }
-
-    aiAwaiting[userId] = false;
-    await bot.sendMessage(chatId, '📡 تحلیل سوالت در حال انجامه...');
-    const userMessage = text + ' in mlbb';
-    const answer = await ai.askAI(userMessage);
-    return bot.sendMessage(chatId, answer);
-  }
+  aiAwaiting[userId] = false; // بعد از استفاده، نوبت غیرفعال شود (هم ادمین هم کاربر)
+  await bot.sendMessage(userId, '📡 تحلیل سوالت در حال انجامه... لطفاً کمی صبر کن');
+  // اضافه کردن in mlbb به انتهای پیام کاربر
+  const userMessage = msg.text + ' in mlbb';
+  const answer = await ai.askAI(userMessage);
+  await bot.sendMessage(userId, answer);
 
   // ... سایر هندلرهای پیام
   
