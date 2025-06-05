@@ -1673,20 +1673,23 @@ if (userId === adminId && state && state.step === 'enter_user_id_for_ai_chance')
 if (userId === adminId && state && state.step === 'enter_new_ai_chance_value') {
   const targetUserId = state.targetUserId;
   if (text.trim() === '#') {
-    // بازگشت به حالت پیش‌فرض (۲/۲)
+    // بازگشت به حالت پیش‌فرض
     await update(ref(db, `users/${targetUserId}`), { maxDailyAIChance: null });
+    // ریست شمارنده مصرف روزانه
+    await update(ref(db, `users/${targetUserId}/ai_usage`), { count: 0 });
     userState[userId] = null;
-    return bot.sendMessage(userId, `شانس روزانه AI کاربر ${targetUserId} به حالت پیش‌فرض (۲/۲) بازگشت.`);
+    return bot.sendMessage(userId, `شانس روزانه AI کاربر ${targetUserId} به حالت پیش‌فرض (۲/۲) بازگشت و شمارنده مصرف هم ریست شد.`);
   } else if (/^\d+$/.test(text)) {
     const val = parseInt(text);
     await update(ref(db, `users/${targetUserId}`), { maxDailyAIChance: val });
+    // ریست شمارنده مصرف روزانه
+    await update(ref(db, `users/${targetUserId}/ai_usage`), { count: 0 });
     userState[userId] = null;
-    return bot.sendMessage(userId, `شانس روزانه AI کاربر ${targetUserId} به ${val}/${val} تغییر کرد.`);
+    return bot.sendMessage(userId, `شانس روزانه AI کاربر ${targetUserId} به ${val}/${val} تغییر کرد و شمارنده مصرف هم ریست شد.`);
   } else {
     return bot.sendMessage(userId, 'عدد معتبر وارد کنید یا # برای حالت پیش‌فرض.');
   }
 }
-  
 
 
   // ---- User steps for calculations ----
