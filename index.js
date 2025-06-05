@@ -592,7 +592,8 @@ if (data === 'ask_ai') {
     await bot.answerCallbackQuery(query.id);
     await bot.sendMessage(userId, 'سوالت رو از هوش مصنوعی بپرس:');
     aiAwaiting[userId] = true;
-return;
+    console.log('aiAwaiting:', aiAwaiting); // فقط برای تست
+    return;
   }
   
   if (data === 'ml_news') {
@@ -1447,49 +1448,23 @@ if (!botActive && msg.from.id !== adminId) {
     return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده ندارید.');
   }
   
-if (msg.chat.type !== 'private') return;
-
-// فقط وقتی منتظر سوال کاربر هستیم یا ادمین است
-if (!aiAwaiting[userId] && userId !== adminId) return;
-
-// اگر ادمین است، هیچ محدودیت کاراکتری ندارد
-if (userId === adminId) {
-  aiAwaiting[userId] = false;
-  await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
-  const userMessage = 'ربات in mlbb ' + msg.text;
-  const answer = await ai.askAI(userMessage);
-  await bot.sendMessage(userId, answer);
-  return;
-}
-
-// بررسی محدودیت کاراکتر
-if (aiAwaiting[userId] && msg.text) {
-  const maxLength = 500; // ✅ مقداردهی متغیر برای جلوگیری از ارور
-
-  if (msg.text.length > maxLength) {
+  if (!aiAwaiting[userId] && userId !== adminId) return;
+  
+  if (msg.chat.type !== 'private') return;
+  
+    if (aiAwaiting[userId] && msg.text) {
     aiAwaiting[userId] = false;
-
-    // برگرداندن quota (فرصت)
-    const usageRef = ref(db, `ai_usage/${userId}`);
-    const usageSnap = await get(usageRef);
-    let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
-    if (usageData.count > 0) {
-      usageData.count--;
-      await set(usageRef, usageData);
-    }
-
-    await bot.sendMessage(userId, `پیام شما بیش از ${maxLength} کاراکتر دارد. لطفاً پیام کوتاه‌تری ارسال کنید. شانس شما بازگشت داده شد.`);
+    await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
+    const answer = await ai.askAI(msg.text);
+    await bot.sendMessage(userId, answer);
     return;
   }
 
-  // اگر همه‌چیز اوکی بود
-  aiAwaiting[userId] = false;
-  await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
-  const userMessage = ' in mlbb' + msg.text;
-  const answer = await ai.askAI(userMessage);
-  await bot.sendMessage(userId, answer);
-  return;
-}
+  // هندل سایر پیام‌ها برای ادمین
+  if (userId === adminId) {
+    const user = await getUser(userId);
+    rank.handleTextMessage(bot, msg, adminMode, adminId);
+  }
   // ... سایر هندلرهای پیام
   
   if (userId === adminId && state && state.step === 'edit_chance_enter_id') {
