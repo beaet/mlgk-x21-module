@@ -16,7 +16,6 @@ const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
 const match = require('./match');
 const rank = require('./rank');
-const { askAI } = require('./ai');
 const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = require('./pick');
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
@@ -85,28 +84,9 @@ async function updatePoints(userId, amount) {
   const user = await getUser(userId);
   if (user) await update(userRef(userId), { points: (user.points || 0) + amount });
 }
-async function handleSomeUser(userId) {
-  const userData = await getUserData(userId);
-  if (userData) {
-    // ادامه پردازش با userData
-  } else {
-    // کاربر وجود ندارد یا داده‌ای ثبت نشده
-  }
-}
 async function updateLastChanceUse(userId, timestamp) {
   await update(userRef(userId), { last_chance_use: timestamp });
 }
-
-async function getUserState(userId) {
-  try {
-    const snapshot = await get(ref(db, `users/${userId}/state`));
-    return snapshot.exists() ? snapshot.val() : null;
-  } catch (e) {
-    console.error('Error getting user state:', e);
-    return null;
-  }
-}
-
 async function setBanStatus(userId, status) {
   await update(userRef(userId), { banned: status ? 1 : 0 });
 }
@@ -146,13 +126,6 @@ async function deleteGiftCode(code) {
 async function getGiftCode(code) {
   const snap = await get(giftCodeRef(code));
   return snap.exists() ? snap.val() : null;
-}
-function getUserState(userId) {
-  return userStates.get(userId) || null;
-}
-
-function clearUserState(userId) {
-  userStates.delete(userId);
 }
 async function upsertGlobalGiftCode(code, points) {
   await set(globalGiftCodeRef(code), { points, users_used: {} });
@@ -245,9 +218,6 @@ function mainMenuKeyboard() {
         ],
         [
           { text: '🕹 ابزار بازی', callback_data: 'tools_menu' }
-        ],
-        [
-                            { text: '🧬 ام ال AI', callback_data: 'ask_ai' }
         ],
         [
           { text: '🔮 چالش', callback_data: 'challenge' }
@@ -544,26 +514,6 @@ if (data === "admin_mode_group") {
       message_id: query.message.message_id
     });
   }
-
-if (data === 'ask_ai') {
-  const userRef = ref(db, `users/${userId}`);
-  const userSnapshot = await get(userRef);
-  const userData = userSnapshot.exists() ? userSnapshot.val() : {};
-  
-  const today = new Date().toISOString().split('T')[0];
-  const isAdmin = userId === Number(process.env.ADMIN_ID);
-
-  let aiChat = userData.aiChat || { count: 0, lastDate: today };
-  if (aiChat.lastDate !== today) aiChat = { count: 0, lastDate: today };
-
-  if (!isAdmin && aiChat.count >= 2) {
-    return bot.answerCallbackQuery(query.id, { text: '❌ سقف ۲ سوال در روز را پر کرده‌اید.', show_alert: true });
-  }
-
-  await setUserState(userId, 'awaiting_ai_question');
-  bot.sendMessage(userId, '✍️ لطفاً سوال خود را از هوش مصنوعی بنویسید.');
-}
-
 
   
   if (data === 'blocked_users_list') {
@@ -1489,20 +1439,6 @@ if (userId === adminId && state && state.step === 'edit_chance_enter_value') {
     return bot.sendMessage(userId, `شانس روزانه کاربر ${state.targetUserId} به ${val}/${val} تنظیم و مقدار استفاده ریست شد.`);
   }
 }
-
-
-  if (state === 'awaiting_ai_question') {
-    clearUserState(userId);
-    bot.sendMessage(userId, '⌛ در حال دریافت پاسخ...');
-
-    const answer = await askAI(text);
-
-    bot.sendMessage(userId, `🤖 پاسخ:\n${answer}`);
-  } else {
-    // پیام‌های عادی یا سایر دستورات
-    bot.sendMessage(userId, 'سلام! برای استفاده از هوش مصنوعی روی دکمه "سوال از AI" کلیک کن.');
-  }
-
   
 if (state && state.step === 'in_anonymous_chat' && state.chatPartner) {
   const partnerId = state.chatPartner;
