@@ -1458,7 +1458,9 @@ if (!botActive && msg.from.id !== adminId) {
     if (aiAwaiting[userId] && msg.text && msg.chat.type === 'private') {
     aiAwaiting[userId] = false;
     bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
+    console.log(`AI question from user ${userId}: ${msg.text}`);
     const answer = await ai.askAI(msg.text);
+    console.log(`AI answer: ${answer}`);
     bot.sendMessage(userId, answer);
     return;
   }
