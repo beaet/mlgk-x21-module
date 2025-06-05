@@ -571,37 +571,31 @@ if (data.startsWith('unblock_')) {
 }
 
 if (data === 'ask_ai') {
-  const userId = query.from.id;
-  const today = new Date().toISOString().slice(0, 10);
+    if (userId !== adminId) {
+      const usageRef = ref(db, `ai_usage/${userId}`);
+      const usageSnap = await get(usageRef);
+      let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
 
-  if (userId !== adminId) {
-    // مسیر مصرف روزانه این کاربر
-    const usageRef = ref(db, `ai_usage/${userId}`);
+      if (usageData.date !== today) {
+        usageData = { date: today, count: 0 };
+      }
 
-    const usageSnap = await get(usageRef);
-    let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
+      if (usageData.count >= 2) {
+        // باید به کاربر پیام بدهی که سقف پر شده!
+        await bot.answerCallbackQuery(query.id, { text: 'شما امروز سقف ۲ بار استفاده از هوش مصنوعی را پر کرده‌اید.', show_alert: true });
+        return;
+      }
 
-    if (usageData.date !== today) {
-      usageData = { date: today, count: 0 };
+      // افزایش شمارنده و ذخیره در DB
+      usageData.count++;
+      await set(usageRef, usageData);
     }
-
-    if (usageData.count >= 2) {
-      return bot.answerCallbackQuery(query.id, {
-        text: 'شما امروز سقف ۲ بار استفاده از هوش مصنوعی را پر کرده‌اید.',
-        show_alert: true
-      });
-    }
-
-    // افزایش شمارنده و ذخیره در DB
-    usageData.count++;
-    await set(usageRef, usageData);
+    // برای همه حتی غیرادمین به اینجا می‌رسیم:
+    await bot.answerCallbackQuery(query.id);
+    bot.sendMessage(userId, 'سوالت رو از هوش مصنوعی بپرس:');
+    aiAwaiting[userId] = true;
+    return;
   }
-
-  await bot.answerCallbackQuery(query.id);
-  bot.sendMessage(userId, 'سوالت رو از هوش مصنوعی بپرس:');
-  aiAwaiting[userId] = true;
-  return;
-}
   
   if (data === 'ml_news') {
   const cooldownRef = ref(db, `cooldowns/news/${userId}`);
@@ -1458,9 +1452,7 @@ if (!botActive && msg.from.id !== adminId) {
     if (aiAwaiting[userId] && msg.text && msg.chat.type === 'private') {
     aiAwaiting[userId] = false;
     bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
-    console.log(`AI question from user ${userId}: ${msg.text}`);
     const answer = await ai.askAI(msg.text);
-    console.log(`AI answer: ${answer}`);
     bot.sendMessage(userId, answer);
     return;
   }
