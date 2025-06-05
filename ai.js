@@ -1,28 +1,43 @@
-const axios = require('axios');
-require('dotenv').config();
+const { getDatabase, ref, get, set } = require('firebase/database');
+const { askAI } = require('./openai'); // فرض بر این است که تابع askAI در فایل openai.js پیاده شده
+const { clearUserState } = require('./utils'); // یا هرجایی که تابع مدیریت state ذخیره شده
 
-async function askAI(question) {
+const db = getDatabase();
+const adminId = 381183017; // عدد آیدی عددی ادمین
+
+async function handleAIQuestion(userId, text, bot) {
+  await clearUserState(userId);
+
+  const userRef = ref(db, `users/${userId}`);
+  const snapshot = await get(userRef);
+  const userData = snapshot.val() || {};
+
+  const today = new Date().toISOString().split('T')[0];
+  const isAdmin = userId === adminId;
+
+  let aiChat = userData.aiChat || { count: 0, lastDate: today };
+
+  if (aiChat.lastDate !== today) {
+    aiChat = { count: 0, lastDate: today };
+  }
+
+  if (!isAdmin && aiChat.count >= 2) {
+    return bot.sendMessage(userId, '❌ شما امروز بیش از ۲ سوال پرسیده‌اید.');
+  }
+
   try {
-    const response = await axios.post(
-      'https://api.cohere.ai/v1/chat',
-      {
-        model: 'command-r-plus',
-        message: question,
-        chat_history: [],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.COHERE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const answer = await askAI(text);
+    await bot.sendMessage(userId, `🤖 پاسخ:\n${answer}`);
 
-    return response.data.text;
+    if (!isAdmin) {
+      aiChat.count += 1;
+      aiChat.lastDate = today;
+      await set(ref(db, `users/${userId}/aiChat`), aiChat);
+    }
   } catch (error) {
-    console.error('AI Error:', error.response?.data || error.message);
-    return '❌ مشکلی در ارتباط با هوش مصنوعی پیش آمد.';
+    console.error('خطا در پاسخ AI:', error);
+    return bot.sendMessage(userId, '❌ خطایی در دریافت پاسخ از هوش مصنوعی رخ داد.');
   }
 }
 
-module.exports = { askAI };
+module.exports = { handleAIQuestion };
