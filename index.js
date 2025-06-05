@@ -16,6 +16,7 @@ const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
 const match = require('./match');
 const rank = require('./rank');
+const { askAI } = require('./ai');
 const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = require('./pick');
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
@@ -218,6 +219,9 @@ function mainMenuKeyboard() {
         ],
         [
           { text: '🕹 ابزار بازی', callback_data: 'tools_menu' }
+        ],
+        [
+                            { text: '🧬 ام ال AI', callback_data: 'ask_ai' }
         ],
         [
           { text: '🔮 چالش', callback_data: 'challenge' }
@@ -514,6 +518,24 @@ if (data === "admin_mode_group") {
       message_id: query.message.message_id
     });
   }
+
+    if (data === 'ask_ai') {
+    const userDoc = await db.ref(`users/${userId}`).once('value');
+    const userData = userDoc.val() || {};
+    const today = new Date().toISOString().split('T')[0];
+    const isAdmin = userId === Number(process.env.ADMIN_ID);
+
+    let aiChat = userData.aiChat || { count: 0, lastDate: today };
+    if (aiChat.lastDate !== today) aiChat = { count: 0, lastDate: today };
+
+    if (!isAdmin && aiChat.count >= 2) {
+      return bot.answerCallbackQuery(query.id, { text: '❌ سقف ۲ سوال در روز را پر کرده‌اید.', show_alert: true });
+    }
+
+    await setUserState(userId, 'awaiting_ai_question');
+    bot.sendMessage(userId, '✍️ لطفاً سوال خود را از هوش مصنوعی بنویسید.');
+  }
+
 
   
   if (data === 'blocked_users_list') {
@@ -1439,6 +1461,32 @@ if (userId === adminId && state && state.step === 'edit_chance_enter_value') {
     return bot.sendMessage(userId, `شانس روزانه کاربر ${state.targetUserId} به ${val}/${val} تنظیم و مقدار استفاده ریست شد.`);
   }
 }
+
+  if (state === 'awaiting_ai_question') {
+    await clearUserState(userId);
+
+    const userDoc = await db.ref(`users/${userId}`).once('value');
+    const userData = userDoc.val() || {};
+    const today = new Date().toISOString().split('T')[0];
+    const isAdmin = userId === adminId;
+
+    let aiChat = userData.aiChat || { count: 0, lastDate: today };
+    if (aiChat.lastDate !== today) aiChat = { count: 0, lastDate: today };
+
+    if (!isAdmin && aiChat.count >= 2) {
+      return bot.sendMessage(userId, '❌ شما امروز بیش از ۲ سوال پرسیده‌اید.');
+    }
+
+    const answer = await askAI(text);
+    await bot.sendMessage(userId, `🤖 پاسخ:\n${answer}`);
+
+    if (!isAdmin) {
+      aiChat.count += 1;
+      aiChat.lastDate = today;
+      await db.ref(`users/${userId}/aiChat`).set(aiChat);
+    }
+  }
+
   
 if (state && state.step === 'in_anonymous_chat' && state.chatPartner) {
   const partnerId = state.chatPartner;
