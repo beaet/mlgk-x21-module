@@ -1,6 +1,5 @@
 const cohere = require('cohere-ai');
-const { ref, get, set } = require('firebase/database');
-const { db } = require('./firebase');
+const { ref, get, db, set } = require('firebase/database');
 
 // کلید API کوهیر رو مستقیم اینجا بذار
 const COHERE_API_KEY = 'کلید_تو_اینجا_بذار';
