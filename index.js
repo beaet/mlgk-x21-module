@@ -577,24 +577,22 @@ if (data === 'ask_ai') {
       const usageSnap = await get(usageRef);
       let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
 
-      if (usageData.date !== today) {
-        usageData = { date: today, count: 0 };
-      }
+      if (usageData.date !== today) usageData = { date: today, count: 0 };
 
       if (usageData.count >= 2) {
-        // باید به کاربر پیام بدهی که سقف پر شده!
-        await bot.answerCallbackQuery(query.id, { text: 'شما امروز سقف ۲ بار استفاده از هوش مصنوعی را پر کرده‌اید.', show_alert: true });
+        await bot.answerCallbackQuery(query.id, {
+          text: 'شما امروز سقف ۲ بار استفاده از هوش مصنوعی را پر کرده‌اید.',
+          show_alert: true
+        });
         return;
       }
-
-      // افزایش شمارنده و ذخیره در DB
       usageData.count++;
       await set(usageRef, usageData);
     }
-    // برای همه حتی غیرادمین به اینجا می‌رسیم:
     await bot.answerCallbackQuery(query.id);
-    bot.sendMessage(userId, 'سوالت رو از هوش مصنوعی بپرس:');
+    await bot.sendMessage(userId, 'سوالت رو از هوش مصنوعی بپرس:');
     aiAwaiting[userId] = true;
+    console.log('aiAwaiting:', aiAwaiting); // فقط برای تست
     return;
   }
   
@@ -1450,8 +1448,8 @@ if (!botActive && msg.from.id !== adminId) {
     return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده ندارید.');
   }
   
-    console.log('MSG:', msg);
-  if (aiAwaiting[userId]) {
+  console.log('msg', userId, msg.text, aiAwaiting[userId]);
+  if (aiAwaiting[userId] && msg.text && msg.chat.type === 'private') {
     aiAwaiting[userId] = false;
     await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
     const answer = await ai.askAI(msg.text);
