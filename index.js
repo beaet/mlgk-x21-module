@@ -9,10 +9,12 @@ const userCooldown = {};
 const app = express();
 const blockedUsers = {};
 const userLastUse = {};
+const aiAwaiting = {}; // userId: true/false
 const spamTracker = {};
 const adminMode = "group";
 const startCooldown = new Map();
 const { startChallenge, handleAnswer } = require('./challenge');
+const ai = require('./ai.js');
 const { sendNews } = require('./news');
 const match = require('./match');
 const rank = require('./rank');
@@ -218,6 +220,9 @@ function mainMenuKeyboard() {
         ],
         [
           { text: '🕹 ابزار بازی', callback_data: 'tools_menu' }
+        ],
+        [
+                                    { text: '🧬 ام ال AI', callback_data: 'ask_ai' }
         ],
         [
           { text: '🔮 چالش', callback_data: 'challenge' }
@@ -563,6 +568,39 @@ if (data.startsWith('unblock_')) {
   blockedUsers[userId] = (blockedUsers[userId] || []).filter(uid => uid != unblockId);
   await bot.answerCallbackQuery(query.id, { text: 'کاربر آنبلاک شد.', show_alert: true });
   return bot.sendMessage(userId, `کاربر ${unblockId} از لیست بلاک خارج شد.`);
+}
+
+if (data === 'ask_ai') {
+  const userId = query.from.id;
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (userId !== adminId) {
+    // مسیر مصرف روزانه این کاربر
+    const usageRef = ref(db, `ai_usage/${userId}`);
+
+    const usageSnap = await get(usageRef);
+    let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
+
+    if (usageData.date !== today) {
+      usageData = { date: today, count: 0 };
+    }
+
+    if (usageData.count >= 2) {
+      return bot.answerCallbackQuery(query.id, {
+        text: 'شما امروز سقف ۲ بار استفاده از هوش مصنوعی را پر کرده‌اید.',
+        show_alert: true
+      });
+    }
+
+    // افزایش شمارنده و ذخیره در DB
+    usageData.count++;
+    await set(usageRef, usageData);
+  }
+
+  await bot.answerCallbackQuery(query.id);
+  bot.sendMessage(userId, 'سوالت رو از هوش مصنوعی بپرس:');
+  aiAwaiting[userId] = true;
+  return;
 }
   
   if (data === 'ml_news') {
@@ -1416,6 +1454,15 @@ if (!botActive && msg.from.id !== adminId) {
   if (user?.banned) {
     return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده ندارید.');
   }
+  
+    if (aiAwaiting[userId] && msg.text && msg.chat.type === 'private') {
+    aiAwaiting[userId] = false;
+    bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
+    const answer = await ai.askAI(msg.text);
+    bot.sendMessage(userId, answer);
+    return;
+  }
+  // ... سایر هندلرهای پیام
   
   if (userId === adminId && state && state.step === 'edit_chance_enter_id') {
   if (!/^\d+$/.test(text)) return bot.sendMessage(userId, 'آیدی عددی معتبر وارد کن.');
