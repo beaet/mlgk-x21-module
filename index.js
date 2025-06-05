@@ -1449,43 +1449,47 @@ if (!botActive && msg.from.id !== adminId) {
   
 if (msg.chat.type !== 'private') return;
 
-  // فقط وقتی منتظر سوال کاربر هستیم یا ادمین است
-  if (!aiAwaiting[userId] && userId !== adminId) return;
+// فقط وقتی منتظر سوال کاربر هستیم یا ادمین است
+if (!aiAwaiting[userId] && userId !== adminId) return;
 
-  // اگر ادمین است، هیچ محدودیت کاراکتری ندارد
-  if (userId === adminId) {
+// اگر ادمین است، هیچ محدودیت کاراکتری ندارد
+if (userId === adminId) {
+  aiAwaiting[userId] = false;
+  await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
+  const userMessage = 'ربات in mlbb ' + msg.text;
+  const answer = await ai.askAI(userMessage);
+  await bot.sendMessage(userId, answer);
+  return;
+}
+
+// بررسی محدودیت کاراکتر
+if (aiAwaiting[userId] && msg.text) {
+  const maxLength = 500; // ✅ مقداردهی متغیر برای جلوگیری از ارور
+
+  if (msg.text.length > maxLength) {
     aiAwaiting[userId] = false;
-    await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
-    const userMessage = 'ربات in mlbb ' + msg.text;
-    const answer = await ai.askAI(userMessage);
-    await bot.sendMessage(userId, answer);
-    return;
-  }
 
-  // بررسی محدودیت کاراکتر
-  if (aiAwaiting[userId] && msg.text) {
-    if (msg.text.length > maxLength) {
-      aiAwaiting[userId] = false;
-      // برگرداندن quota (فرصت)
-      const usageRef = ref(db, `ai_usage/${userId}`);
-      const usageSnap = await get(usageRef);
-      let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
-      if (usageData.count > 0) {
-        usageData.count--;
-        await set(usageRef, usageData);
-      }
-      await bot.sendMessage(userId, `پیام شما بیش از ${maxLength} کاراکتر دارد. لطفاً پیام کوتاه‌تری ارسال کنید. شانس شما بازگشت داده شد.`);
-      return;
+    // برگرداندن quota (فرصت)
+    const usageRef = ref(db, `ai_usage/${userId}`);
+    const usageSnap = await get(usageRef);
+    let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
+    if (usageData.count > 0) {
+      usageData.count--;
+      await set(usageRef, usageData);
     }
 
-    // اگر همه‌چیز اوکی بود
-    aiAwaiting[userId] = false;
-    await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
-    const userMessage = ' in mlbb' + msg.text;
-    const answer = await ai.askAI(userMessage);
-    await bot.sendMessage(userId, answer);
+    await bot.sendMessage(userId, `پیام شما بیش از ${maxLength} کاراکتر دارد. لطفاً پیام کوتاه‌تری ارسال کنید. شانس شما بازگشت داده شد.`);
     return;
   }
+
+  // اگر همه‌چیز اوکی بود
+  aiAwaiting[userId] = false;
+  await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
+  const userMessage = ' in mlbb' + msg.text;
+  const answer = await ai.askAI(userMessage);
+  await bot.sendMessage(userId, answer);
+  return;
+}
   // ... سایر هندلرهای پیام
   
   if (userId === adminId && state && state.step === 'edit_chance_enter_id') {
