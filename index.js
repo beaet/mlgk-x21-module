@@ -1482,7 +1482,7 @@ if (msg.chat.type !== 'private') return;
     // اگر همه‌چیز اوکی بود
     aiAwaiting[userId] = false;
     await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
-    const userMessage = 'ربات in mlbb ' + msg.text;
+    const userMessage = ' in mlbb' + msg.text;
     const answer = await ai.askAI(userMessage);
     await bot.sendMessage(userId, answer);
     return;
