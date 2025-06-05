@@ -85,8 +85,18 @@ await bot.sendMessage(partnerId, `✅ یک هم‌تیمی برای شما پی�
   } else {
     // وارد صف بشه
     teammateQueue[mode].push(userId);
-    await bot.sendMessage(userId, `🔎در حال جستجو برای هم‌تیمی (${mode === 'ranked' ? 'رنک' : 'کلاسیک'})...\nتا پیدا شدن چت کنسل نمی‌شه.\nبرای لغو /cancel را بزنید.`);
-    return false;
+await bot.sendMessage(userId, `🔎در حال جستجو برای هم‌تیمی (${mode === 'ranked' ? 'رنک' : 'کلاسیک'})...\nتا پیدا شدن چت کنسل نمی‌شه.\nبرای لغو /cancel را بزنید.`);
+
+// تابع کمکی برای delay
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+await delay(2000); // 2 ثانیه صبر کن
+
+await bot.sendMessage(userId, "🌕");
+
+return false;
   }
 }
 
