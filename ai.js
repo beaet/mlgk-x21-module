@@ -1,22 +1,23 @@
-const cohere = require('cohere-ai');
+const axios = require('axios');
 
-const COHERE_API_KEY = process.env.COHERE_API_KEY || 'کلید_تو_اینجا_بذار';
-cohere.init(COHERE_API_KEY);
+const apiKey = process.env.COHERE_API_KEY;
 
-async function askAI(message) {
+async function askAI(question) {
   try {
-    const response = await cohere.generate({
-      model: 'command-xlarge-nightly',
-      prompt: message,
-      max_tokens: 150,
-      temperature: 0.7,
-      stop_sequences: ['User:', 'Assistant:'],
-    });
-
-    return response.body.generations[0].text.trim();
-  } catch (error) {
-    console.error('Error in askAI:', error);
-    return 'خطایی رخ داد، لطفا دوباره تلاش کنید.';
+    const res = await axios.post(
+      'https://api.cohere.ai/v1/chat',
+      { message: question },
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return res.data.text || 'پاسخی دریافت نشد!';
+  } catch (err) {
+    console.error('AI error:', err.response?.data || err.message);
+    return '❌ مشکلی در ارتباط با هوش مصنوعی رخ داد.';
   }
 }
 
