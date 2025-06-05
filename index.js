@@ -43,6 +43,8 @@ const MENU_BUTTONS = [
     { key: 'anon_block', label: '⛔ بلاک هم تیمی' },
       { key: 'blocked_users_list', label: '🚫 لیست بلاک هم تیمی' },
   { key: 'gift_code', label: '🎁 کد هدیه' },
+    { key: 'ask_ai', label: '🧬 ام ال AI' },
+      { key: 'rank_calculator', label: '🧮 ماشین حساب رنک' },
   { key: 'ml_news', label: '📰 اخبار بازی' },
   { key: 'find_teammate', label: '🎲 پیداکردن هم‌‌ تیمی رندوم' }
 ];
@@ -225,9 +227,6 @@ function mainMenuKeyboard() {
                                     { text: '🧬 ام ال AI', callback_data: 'ask_ai' }
         ],
         [
-          { text: '🔮 چالش', callback_data: 'challenge' }
-        ],
-        [
           { text: '🔗 دعوت دوستان', callback_data: 'referral' },
           { text: '👤 پروفایل', callback_data: 'profile' }
         ],
@@ -236,13 +235,13 @@ function mainMenuKeyboard() {
           { text: '👥 مشاهده اسکوادها', callback_data: 'view_squads' }
         ],
         [
-                  { text: '📰 اخبار بازی', callback_data: 'ml_news' },
+                  { text: '📚 راهنما', callback_data: 'help' },
           { text: '💬 پشتیبانی', callback_data: 'support' },
-          { text: '📚 راهنما', callback_data: 'help' }
+          { text: '💰 خرید امتیاز', callback_data: 'buy' }
         ],
         [
           { text: '🎁 کد هدیه', callback_data: 'gift_code' },
-          { text: '💰 خرید امتیاز', callback_data: 'buy' },
+          { text: '🔮 چالش', callback_data: 'challenge' },
           { text: '🍀 شانس', callback_data: 'chance' }
         ]
       ]
@@ -264,6 +263,9 @@ function toolsMenuKeyboard() {
         [
           { text: '⚔ هیرو کانتر', callback_data: 'hero_counter' },
           { text: '🎯 رندوم پیک', callback_data: 'pick_hero' }
+        ],
+        [
+                          { text: '📰 اخبار بازی', callback_data: 'ml_news' }
         ],
         [
           { text: '📜 لیست پیک و بن', callback_data: 'pickban_list' }
@@ -418,12 +420,6 @@ bot.onText(/\/panel/, async (msg) => {
                           { text: '🎲 ویرایش شانس روزانه', callback_data: 'edit_chance' }
         ],
         [
-                                  { text: '🎟️ حساب کردن رنک با کم شدن امتیاز', callback_data: 'admin_mode_point' }
-        ],
-        [
-                                  { text: '🎫 حساب کردن رنک با محدودیت زمانی', callback_data: 'admin_mode_group' }
-        ],
-        [
           { text: '📋 جزییات کاربران', callback_data: 'user_details' }
         ]
       ]
@@ -504,24 +500,6 @@ const now = Date.now();
     });
   }
   
-if (data === "admin_mode_group") {
-    adminSettings.mode = "group";
-    await bot.answerCallbackQuery(query.id, { text: "حالت گروهی فعال شد." });
-    return bot.editMessageText("✅ حالت عملیات گروهی فعال شد.", {
-      chat_id: query.message.chat.id,
-      message_id: query.message.message_id
-    });
-  }
-  if (data === "admin_mode_point") {
-    adminSettings.mode = "point";
-    await bot.answerCallbackQuery(query.id, { text: "حالت امتیاز فعال شد." });
-    return bot.editMessageText("✅ حالت امتیاز فعال شد.", {
-      chat_id: query.message.chat.id,
-      message_id: query.message.message_id
-    });
-  }
-
-  
   if (data === 'blocked_users_list') {
   const list = blockedUsers[userId] || [];
   if (list.length === 0) {
@@ -581,7 +559,7 @@ if (data === 'ask_ai') {
 
       if (usageData.count >= 2) {
         await bot.answerCallbackQuery(query.id, {
-          text: 'شما امروز سقف ۲ بار استفاده از هوش مصنوعی را پر کرده‌اید.',
+          text: 'شما امروز سقف 2 بار استفاده از هوش مصنوعی را پر کرده‌اید.',
           show_alert: true
         });
         return;
@@ -590,7 +568,9 @@ if (data === 'ask_ai') {
       await set(usageRef, usageData);
     }
     await bot.answerCallbackQuery(query.id);
-    await bot.sendMessage(userId, 'سوالت رو از هوش مصنوعی بپرس:');
+    await bot.sendMessage(userId, '🤖 هوش مصنوعی ML Studio اکنون فعال است!
+
+✍🏻 سوالت رو بنویس تا در کمترین زمان، دقیق‌ترین پاسخ رو دریافت کنی:');
     aiAwaiting[userId] = true;
 return;
   }
@@ -1474,7 +1454,7 @@ if (msg.chat.type !== 'private') return;
   }
 
   aiAwaiting[userId] = false; // بعد از استفاده، نوبت غیرفعال شود (هم ادمین هم کاربر)
-  await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
+  await bot.sendMessage(userId, '📡 تحلیل سوالت در حال انجامه... لطفاً کمی صبر کن');
   // اضافه کردن in mlbb به انتهای پیام کاربر
   const userMessage = msg.text + ' in mlbb';
   const answer = await ai.askAI(userMessage);
