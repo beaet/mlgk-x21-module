@@ -592,8 +592,7 @@ if (data === 'ask_ai') {
     await bot.answerCallbackQuery(query.id);
     await bot.sendMessage(userId, 'سوالت رو از هوش مصنوعی بپرس:');
     aiAwaiting[userId] = true;
-    console.log('aiAwaiting:', aiAwaiting); // فقط برای تست
-    return;
+return;
   }
   
   if (data === 'ml_news') {
@@ -1448,23 +1447,39 @@ if (!botActive && msg.from.id !== adminId) {
     return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده ندارید.');
   }
   
-  if (!aiAwaiting[userId] && userId !== adminId) return;
-  
-  if (msg.chat.type !== 'private') return;
-  
-    if (aiAwaiting[userId] && msg.text) {
-    aiAwaiting[userId] = false;
-    await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
-    const answer = await ai.askAI(msg.text);
-    await bot.sendMessage(userId, answer);
+if (msg.chat.type !== 'private') return;
+
+  // فقط وقتی منتظر سوال AI هستیم (چه ادمین چه کاربر عادی)
+  if (!aiAwaiting[userId]) return;
+
+  // اگر متن پیام وجود ندارد، هندل نشود
+  if (!msg.text) return;
+
+  // محدودیت تعداد کاراکتر (برای همه، حتی ادمین)
+  const maxLength = 270;
+  if (msg.text.length > maxLength) {
+    aiAwaiting[userId] = false; // نوبت مصرف شده لغو شود
+    // اگر کاربر عادی بود quota را برگردان (ادمین quota ندارد)
+    if (userId !== adminId) {
+      const usageRef = ref(db, `ai_usage/${userId}`);
+      const usageSnap = await get(usageRef);
+      let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
+      if (usageData.count > 0) {
+        usageData.count--;
+        await set(usageRef, usageData);
+      }
+    }
+    await bot.sendMessage(userId, `پیام شما بیش از ${maxLength} کاراکتر دارد. لطفاً پیام کوتاه‌تری ارسال کنید. شانس شما بازگشت داده شد.`);
     return;
   }
 
-  // هندل سایر پیام‌ها برای ادمین
-  if (userId === adminId) {
-    const user = await getUser(userId);
-    rank.handleTextMessage(bot, msg, adminMode, adminId);
-  }
+  aiAwaiting[userId] = false; // بعد از استفاده، نوبت غیرفعال شود (هم ادمین هم کاربر)
+  await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
+  // اضافه کردن in mlbb به انتهای پیام کاربر
+  const userMessage = msg.text + ' in mlbb';
+  const answer = await ai.askAI(userMessage);
+  await bot.sendMessage(userId, answer);
+
   // ... سایر هندلرهای پیام
   
   if (userId === adminId && state && state.step === 'edit_chance_enter_id') {
