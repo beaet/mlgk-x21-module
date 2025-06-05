@@ -592,8 +592,7 @@ if (data === 'ask_ai') {
     await bot.answerCallbackQuery(query.id);
     await bot.sendMessage(userId, 'سوالت رو از هوش مصنوعی بپرس:');
     aiAwaiting[userId] = true;
-    console.log('aiAwaiting:', aiAwaiting); // فقط برای تست
-    return;
+return;
   }
   
   if (data === 'ml_news') {
