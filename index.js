@@ -16,7 +16,7 @@ const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
 const match = require('./match');
 const rank = require('./rank');
-const { askAI } = require('./ai');
+const { setUserState, clearUserState } = require('./ai');
 const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = require('./pick');
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
