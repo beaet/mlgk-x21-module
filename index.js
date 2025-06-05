@@ -1384,91 +1384,46 @@ return bot.sendMessage(userId, '🍃 تعداد کل بازی‌ ها را به 
 // ... ناحیه message handler بدون تغییر، فقط بخش stateهای جدید اضافه شود
 bot.on('message', async (msg) => {
   const userId = msg.from.id;
-  const text = msg.text || '';
   const state = userState[userId];
-
-  // فقط پیام چت خصوصی
-  if (msg.chat.type !== 'private') return;
-
-  // اگر ربات غیرفعاله و ادمین نیست، پیام رد شه
-  if (!botActive && userId !== adminId) {
-    return bot.sendMessage(userId, "ربات موقتاً خاموش است.");
-  }
-
-  // اگر کاربر بن شده است
+  const text = msg.text || '';
+  if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
+rank.handleTextMessage(bot, msg, adminMode, adminId);
+
+  if (state && state.step === 'ask_rank') {
+    state.teammateProfile.rank = text;
+    state.step = 'ask_mainHero';
+    return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
+  }
+  if (state && state.step === 'ask_mainHero') {
+    state.teammateProfile.mainHero = text;
+    state.step = 'ask_mainRole';
+    return bot.sendMessage(userId, '🎯 بیشتر چه رولی پلی می‌دی؟ (مثلا: تانک، ساپورت، مید)');
+  }
+  if (state && state.step === 'ask_mainRole') {
+    state.teammateProfile.mainRole = text;
+    state.step = 'ask_gameId';
+    return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
+  }
+  if (state && state.step === 'ask_gameId') {
+    state.teammateProfile.gameId = text || 'اختیاری/نامشخص';
+    await update(userRef(userId), { teammate_profile: state.teammateProfile });
+    userState[userId] = null;
+    return bot.sendMessage(userId, '✅ اطلاعات شما ذخیره شد! از دکمه پروفایل می‌تونی ببینی.');
+  }
+  
+    if (userState[userId]?.type === 'rank') {
+    await rank.handleImmortalInput(bot, userId, msg.text);
+    return;
+  }
+  
+if (!botActive && msg.from.id !== adminId) {
+    return bot.sendMessage(msg.from.id, "ربات موقتاً خاموش است.");
+  }
+  
   if (user?.banned) {
     return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده ندارید.');
   }
-
-  // --- فقط اگر منتظر سوال هوش مصنوعی هستیم (برای ادمین و کاربر عادی) ---
-  if (aiAwaiting[userId]) {
-    // محدودیت کاراکتر
-    const maxLength = 270;
-    if (!text) return;
-    if (text.length > maxLength) {
-      aiAwaiting[userId] = false;
-      if (userId !== adminId) {
-        const usageRef = ref(db, `ai_usage/${userId}`);
-        const usageSnap = await get(usageRef);
-        let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
-        if (usageData.count > 0) {
-          usageData.count--;
-          await set(usageRef, usageData);
-        }
-      }
-      await bot.sendMessage(userId, `پیام شما بیش از ${maxLength} کاراکتر دارد. لطفاً پیام کوتاه‌تری ارسال کنید. شانس شما بازگشت داده شد.`);
-      return;
-    }
-    aiAwaiting[userId] = false;
-    await bot.sendMessage(userId, '📡 تحلیل سوالت در حال انجامه... لطفاً کمی صبر کن');
-    const userMessage = text + ' in mlbb';
-    const answer = await ai.askAI(userMessage);
-    await bot.sendMessage(userId, answer);
-    return;
-  }
-
-  // --- اگر state فعال است (مراحل فرم، اسکواد و...) ---
-  if (state) {
-    if (state.step === 'ask_rank') {
-      state.teammateProfile.rank = text;
-      state.step = 'ask_mainHero';
-      return bot.sendMessage(userId, '🦸‍♂️ هیرو مین‌ت چیه؟ (مثلا: Kagura, Hayabusa)');
-    }
-    if (state.step === 'ask_mainHero') {
-      state.teammateProfile.mainHero = text;
-      state.step = 'ask_mainRole';
-      return bot.sendMessage(userId, '🎯 بیشتر چه رولی پلی می‌دی؟ (مثلا: تانک، ساپورت، مید)');
-    }
-    if (state.step === 'ask_mainRole') {
-      state.teammateProfile.mainRole = text;
-      state.step = 'ask_gameId';
-      return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
-    }
-    if (state.step === 'ask_gameId') {
-      state.teammateProfile.gameId = text || 'اختیاری/نامشخص';
-      await update(userRef(userId), { teammate_profile: state.teammateProfile });
-      userState[userId] = null;
-      return bot.sendMessage(userId, '✅ اطلاعات شما ذخیره شد! از دکمه پروفایل می‌تونی ببینی.');
-    }
-    // بقیه stateها رو همینجا اضافه کن...
-    if (userState[userId]?.type === 'rank') {
-      await rank.handleImmortalInput(bot, userId, text);
-      return;
-    }
-    // بقیه stateها...
-    return; // اگر state فعال بود، بقیه کد اجرا نشه
-  }
-
-  // --- فقط ادمین ---
-  if (userId === adminId) {
-    rank.handleTextMessage(bot, msg, adminMode, adminId);
-    // سایر دستورات ادمین...
-    return;
-  }
-
-  // اگر هیچکدوم نبود، پیام رد شه (کاربر عادی بدون state و aiAwaiting)
-  // ... سایر هندلرهای پیام
   
   if (userId === adminId && state && state.step === 'edit_chance_enter_id') {
   if (!/^\d+$/.test(text)) return bot.sendMessage(userId, 'آیدی عددی معتبر وارد کن.');
