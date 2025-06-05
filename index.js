@@ -241,8 +241,8 @@ function mainMenuKeyboard() {
         ],
         [
           { text: '🎁 کد هدیه', callback_data: 'gift_code' },
-          { text: '📝 چالش', callback_data: 'challenge' },
-          { text: '🎯 شانس', callback_data: 'chance' }
+          { text: '🔮 چالش', callback_data: 'challenge' },
+          { text: '🍀 شانس', callback_data: 'chance' }
         ]
       ]
     }
@@ -420,6 +420,9 @@ bot.onText(/\/panel/, async (msg) => {
                           { text: '🎲 ویرایش شانس روزانه', callback_data: 'edit_chance' }
         ],
         [
+                                  { text: '🤖 AI افزایش شانس', callback_data: 'change_daily_ai_chance' }
+        ],
+        [
           { text: '📋 جزییات کاربران', callback_data: 'user_details' }
         ]
       ]
@@ -514,6 +517,12 @@ const now = Date.now();
   return bot.sendMessage(userId, 'لیست کاربران بلاک شده:', {
     reply_markup: { inline_keyboard: keyboard }
   });
+}
+
+if (data === 'change_daily_ai_chance') {
+  userState[adminId] = { step: 'enter_user_id_for_ai_chance' };
+  await bot.answerCallbackQuery(query.id);
+  return bot.sendMessage(adminId, 'آیدی عددی کاربر را وارد کنید:');
 }
 
 // ⬇️ برای شروع ماشین‌حساب رنک
@@ -867,7 +876,6 @@ if (data === 'hero_counter') {
 
 if (data === 'profile') {
   await bot.answerCallbackQuery(query.id);
-
   const invitesCount = user.invites || 0;
   const maxDailyChance = match.getMaxDailyChance(user);
   const usedChance = user.findChanceUsed || 0;
@@ -877,25 +885,14 @@ if (data === 'profile') {
   const mainRole = teammateProfile.mainRole || 'نامشخص';
   const gameId = teammateProfile.gameId || 'نامشخص';
 
-  // --- بخش شانس AI ---
-  // مقدار پیش‌فرض شانس روزانه AI (مثلاً 2)
-  const maxDailyAIChance = user.maxDailyAIChance || 2;
+  // شانس هوش مصنوعی
+  const maxDailyAIChance = user.maxDailyAIChance || 2; // اگر مقدار custom ندارد، پیش‌فرض ۲
   const aiUsage = user.ai_usage || {};
   const aiUsed = aiUsage.count || 0;
   const aiChanceStr = (aiUsed < maxDailyAIChance)
     ? `${maxDailyAIChance - aiUsed} از ${maxDailyAIChance}`
     : 'تمام!';
 
-if (data === 'profile') {
-  await bot.answerCallbackQuery(query.id);
-  const invitesCount = user.invites || 0;
-  const maxDailyChance = match.getMaxDailyChance(user);
-  const usedChance = user.findChanceUsed || 0;
-  const teammateProfile = user.teammate_profile || {};
-  const rank = teammateProfile.rank || 'نامشخص';
-  const mainHero = teammateProfile.mainHero || 'نامشخص';
-  const mainRole = teammateProfile.mainRole || 'نامشخص';
-  const gameId = teammateProfile.gameId || 'نامشخص';
   let profileMessage = 
     `🆔 آیدی عددی: ${userId}\n` +
     `⭐ امتیاز فعلی: ${user.points}\n` +
@@ -1661,6 +1658,34 @@ if (text === '/cancel' && state && state.step === 'waiting_match') {
         return bot.sendMessage(userId, `کد ${code} (در صورت وجود) حذف شد.`);
     }
   }
+  
+  // مرحله گرفتن آیدی عددی کاربر
+if (userId === adminId && state && state.step === 'enter_user_id_for_ai_chance') {
+  if (!/^\d+$/.test(text)) {
+    return bot.sendMessage(userId, 'آیدی عددی معتبر وارد کنید.');
+  }
+  state.targetUserId = text.trim();
+  state.step = 'enter_new_ai_chance_value';
+  return bot.sendMessage(userId, 'عدد شانس روزانه جدید AI را وارد کن (مثلاً 4). اگر می‌خواهی به حالت پیش‌فرض (۲/۲) برگردد، # را وارد کن:');
+}
+
+// مرحله گرفتن عدد شانس یا # برای پیش‌فرض
+if (userId === adminId && state && state.step === 'enter_new_ai_chance_value') {
+  const targetUserId = state.targetUserId;
+  if (text.trim() === '#') {
+    // بازگشت به حالت پیش‌فرض (۲/۲)
+    await update(ref(db, `users/${targetUserId}`), { maxDailyAIChance: null });
+    userState[userId] = null;
+    return bot.sendMessage(userId, `شانس روزانه AI کاربر ${targetUserId} به حالت پیش‌فرض (۲/۲) بازگشت.`);
+  } else if (/^\d+$/.test(text)) {
+    const val = parseInt(text);
+    await update(ref(db, `users/${targetUserId}`), { maxDailyAIChance: val });
+    userState[userId] = null;
+    return bot.sendMessage(userId, `شانس روزانه AI کاربر ${targetUserId} به ${val}/${val} تغییر کرد.`);
+  } else {
+    return bot.sendMessage(userId, 'عدد معتبر وارد کنید یا # برای حالت پیش‌فرض.');
+  }
+}
   
 
 
