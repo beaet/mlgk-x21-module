@@ -9,7 +9,7 @@ const userCooldown = {};
 const app = express();
 const blockedUsers = {};
 const userLastUse = {};
-const aiAwaiting = {}; // userId: true/false
+const aiAwaiting = {};
 const spamTracker = {};
 const adminMode = "group";
 const startCooldown = new Map();
@@ -440,7 +440,6 @@ bot.on('callback_query', async (query) => {
 const now = Date.now();
   const userId = query.from.id;
   const data = query.data;
-const today = new Date().toISOString().slice(0, 10);
   const chat_id = query.message.chat.id;
   const messageId = query.message.message_id;
   const message_id = query.message.message_id; // این خط درست و کافی است
@@ -1450,11 +1449,11 @@ if (!botActive && msg.from.id !== adminId) {
     return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده ندارید.');
   }
   
-    if (aiAwaiting[userId] && msg.text && msg.chat.type === 'private') {
+    const userId = if (aiAwaiting[userId] && msg.text && msg.chat.type === 'private') {
     aiAwaiting[userId] = false;
-    bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
+    await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
     const answer = await ai.askAI(msg.text);
-    bot.sendMessage(userId, answer);
+    await bot.sendMessage(userId, answer);
     return;
   }
   // ... سایر هندلرهای پیام
