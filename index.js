@@ -1386,7 +1386,7 @@ bot.on('message', async (msg) => {
   const userId = msg.from.id;
   const state = userState[userId];
   const text = msg.text || '';
-  if (!userState[userId] && !aiAwaiting[userId] && userId !== adminId) return;
+  if (!userState[userId] && userId !== adminId) return;
   const user = await getUser(userId);
 rank.handleTextMessage(bot, msg, adminMode, adminId);
 
