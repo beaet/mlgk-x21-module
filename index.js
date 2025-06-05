@@ -1449,7 +1449,8 @@ if (!botActive && msg.from.id !== adminId) {
     return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده ندارید.');
   }
   
-    const userId = if (aiAwaiting[userId] && msg.text && msg.chat.type === 'private') {
+    console.log('MSG:', msg);
+  if (aiAwaiting[userId]) {
     aiAwaiting[userId] = false;
     await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
     const answer = await ai.askAI(msg.text);
