@@ -85,6 +85,14 @@ async function updatePoints(userId, amount) {
   const user = await getUser(userId);
   if (user) await update(userRef(userId), { points: (user.points || 0) + amount });
 }
+async function handleSomeUser(userId) {
+  const userData = await getUserData(userId);
+  if (userData) {
+    // ادامه پردازش با userData
+  } else {
+    // کاربر وجود ندارد یا داده‌ای ثبت نشده
+  }
+}
 async function updateLastChanceUse(userId, timestamp) {
   await update(userRef(userId), { last_chance_use: timestamp });
 }
