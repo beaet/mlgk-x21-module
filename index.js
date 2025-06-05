@@ -1386,9 +1386,38 @@ bot.on('message', async (msg) => {
   const userId = msg.from.id;
   const state = userState[userId];
   const text = msg.text || '';
-  if (!userState[userId] && userId !== adminId) return;
+  if (msg.chat.type !== 'private') return;
+  
   const user = await getUser(userId);
 rank.handleTextMessage(bot, msg, adminMode, adminId);
+
+if (aiAwaiting[userId]) {
+    const maxLength = 270;
+    if (!text) return;
+    if (text.length > maxLength) {
+      aiAwaiting[userId] = false;
+      if (userId !== adminId) {
+        const usageRef = ref(db, `ai_usage/${userId}`);
+        const usageSnap = await get(usageRef);
+        let usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
+        if (usageData.count > 0) {
+          usageData.count--;
+          await set(usageRef, usageData);
+        }
+      }
+      await bot.sendMessage(userId, `پیام شما بیش از ${maxLength} کاراکتر دارد. لطفاً پیام کوتاه‌تری ارسال کنید. شانس شما بازگشت داده شد.`);
+      return;
+    }
+    aiAwaiting[userId] = false;
+    await bot.sendMessage(userId, '📡 تحلیل سوالت در حال انجامه... لطفاً کمی صبر کن');
+    const userMessage = text + ' in mlbb';
+    const answer = await ai.askAI(userMessage);
+    await bot.sendMessage(userId, answer);
+    return; // مهم! بقیه کد اجرا نشود
+  }
+
+  // === state های چندمرحله‌ای ===
+
 
   if (state && state.step === 'ask_rank') {
     state.teammateProfile.rank = text;
