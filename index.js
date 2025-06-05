@@ -241,8 +241,8 @@ function mainMenuKeyboard() {
         ],
         [
           { text: '🎁 کد هدیه', callback_data: 'gift_code' },
-          { text: '🔮 چالش', callback_data: 'challenge' },
-          { text: '🍀 شانس', callback_data: 'chance' }
+          { text: '📝 چالش', callback_data: 'challenge' },
+          { text: '🎯 شانس', callback_data: 'chance' }
         ]
       ]
     }
