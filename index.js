@@ -632,6 +632,7 @@ if (banSnap.exists() && banSnap.val().until > now) {
 }
 
 // هندل دکمه‌های پیدا کردن هم‌تیمی (عادی، رنک، کلاسیک)
+// دکمه پیدا کردن هم‌تیمی اصلی
 if (
   data === 'find_teammate' ||
   data === 'find_teammate_ranked' ||
@@ -643,7 +644,11 @@ if (
 
   if (usedChance >= maxDailyChance) {
     return bot.answerCallbackQuery(query.id, {
-      text: `🔖 سقف شانس امروزیت پره! برای هر نمایش دسته‌بندی)
+      text: `🔖 سقف شانس امروزیت پره! برای هر ۵ دعوت، هر روز یک شانس بیشتر می‌گیری.`,
+      show_alert: true
+    });
+  }
+
   if (data === 'find_teammate') {
     userState[userId] = { step: 'find_teammate_category' };
     await bot.answerCallbackQuery(query.id);
@@ -659,7 +664,13 @@ if (
             ],
             [{ text: '🧭ثبت اطلاعات من', callback_data: 'find_teammate_profile' }],
             [{ text: '📋 لیست بلاکی‌ها', callback_data: 'blocked_users_list' }],
-            [{ text: '🔙بازگشت', callback_data: ' کلاسیک
+            [{ text: '🔙بازگشت', callback_data: 'main_menu' }]
+          ]
+        }
+      }
+    );
+  }
+
   if (data === 'find_teammate_ranked' || data === 'find_teammate_classic') {
     userState[userId] = {
       step: 'waiting_match',
@@ -677,13 +688,11 @@ if (
   }
 }
 
-// هندل ثبت یا ویرایش پروفایل بازیکن
 if (data === 'find_teammate_profile') {
   userState[userId] = { step: 'ask_rank', teammateProfile: {} };
   await bot.answerCallbackQuery(query.id);
   return bot.sendMessage(userId, '🏅 رنکت چیه؟ (مثلا: اپیک، لجند، میتیک)');
 }
-
 
 if (data === 'anon_cancel') {
   // اگر قبلا لغو نکرده بود
