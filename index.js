@@ -16,7 +16,7 @@ const { startChallenge, handleAnswer } = require('./challenge');
 const { sendNews } = require('./news');
 const match = require('./match');
 const rank = require('./rank');
-const { setUserState, clearUserState } = require('./ai');
+const { askAI } = require('./ai');
 const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = require('./pick');
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
@@ -146,6 +146,13 @@ async function deleteGiftCode(code) {
 async function getGiftCode(code) {
   const snap = await get(giftCodeRef(code));
   return snap.exists() ? snap.val() : null;
+}
+function getUserState(userId) {
+  return userStates.get(userId) || null;
+}
+
+function clearUserState(userId) {
+  userStates.delete(userId);
 }
 async function upsertGlobalGiftCode(code, points) {
   await set(globalGiftCodeRef(code), { points, users_used: {} });
@@ -1483,33 +1490,17 @@ if (userId === adminId && state && state.step === 'edit_chance_enter_value') {
   }
 }
 
-if (!text) return; // اگر پیام متنی نیست رد کن
 
   if (state === 'awaiting_ai_question') {
-    await clearUserState(userId);
-const state = await getUserState(userId);
-    // باقی کد AI که داری
-    const userRef = ref(db, `users/${userId}`);
-    const userSnapshot = await get(userRef);
-    const userData = userSnapshot.exists() ? userSnapshot.val() : {};
-    const today = new Date().toISOString().split('T')[0];
-    const isAdmin = userId === adminId;
-
-    let aiChat = userData.aiChat || { count: 0, lastDate: today };
-    if (aiChat.lastDate !== today) aiChat = { count: 0, lastDate: today };
-
-    if (!isAdmin && aiChat.count >= 2) {
-      return bot.sendMessage(userId, '❌ شما امروز بیش از ۲ سوال پرسیده‌اید.');
-    }
+    clearUserState(userId);
+    bot.sendMessage(userId, '⌛ در حال دریافت پاسخ...');
 
     const answer = await askAI(text);
-    await bot.sendMessage(userId, `🤖 پاسخ:\n${answer}`);
 
-    if (!isAdmin) {
-      aiChat.count += 1;
-      aiChat.lastDate = today;
-      await set(ref(db, `users/${userId}/aiChat`), aiChat);
-    }
+    bot.sendMessage(userId, `🤖 پاسخ:\n${answer}`);
+  } else {
+    // پیام‌های عادی یا سایر دستورات
+    bot.sendMessage(userId, 'سلام! برای استفاده از هوش مصنوعی روی دکمه "سوال از AI" کلیک کن.');
   }
 
   
