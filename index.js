@@ -440,6 +440,7 @@ bot.on('callback_query', async (query) => {
 const now = Date.now();
   const userId = query.from.id;
   const data = query.data;
+const today = new Date().toISOString().slice(0, 10);
   const chat_id = query.message.chat.id;
   const messageId = query.message.message_id;
   const message_id = query.message.message_id; // این خط درست و کافی است
