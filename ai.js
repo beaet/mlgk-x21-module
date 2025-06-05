@@ -1,29 +1,26 @@
-const { ref, get, set } = require('firebase/database');
-const db = global.db;
+const cohere = require('cohere-ai');
 
-async function askAI(userId, message) {
+const COHERE_API_KEY = process.env.COHERE_API_KEY || 'کلید_تو_اینجا_بذار';
+cohere.init(COHERE_API_KEY);
+
+/**
+ * ارسال پیام به cohere و دریافت پاسخ
+ * @param {string} message پیام کاربر
+ * @returns {Promise<string>} پاسخ AI
+ */
+async function askAI(message) {
   try {
-    const historyRef = ref(db, `chat_history/${userId}`);
-    const snapshot = await get(historyRef);
-    let history = snapshot.exists() ? snapshot.val() : [];
-
-    history.push(`User: ${message}`);
-    const prompt = history.join('\n') + '\nAssistant:';
-
-    // فرض بر این که cohere قبلا init شده
     const response = await cohere.generate({
       model: 'command-xlarge-nightly',
-      prompt,
+      prompt: message,
       max_tokens: 150,
       temperature: 0.7,
       stop_sequences: ['User:', 'Assistant:'],
     });
 
     const reply = response.body.generations[0].text.trim();
-    history.push(`Assistant: ${reply}`);
-
-    await set(historyRef, history);
     return reply;
+
   } catch (error) {
     console.error('Error in askAI:', error);
     return 'خطایی رخ داد، لطفا دوباره تلاش کنید.';
