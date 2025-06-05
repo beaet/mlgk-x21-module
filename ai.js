@@ -34,8 +34,8 @@ async function askAI(message) {
  */
 async function setUserState(userId, state) {
   // این تابع باید تو index.js تعریف بشه چون db اونجا هست
-  // پس اینجا فقط ارور نده و می‌تونی از اینجا اینجا تعریف نکنی یا بعداً تعریف کنی
-  throw new Error('setUserState is not implemented');
+  // پس اینجا فقط اعلامش کردم که ارور نده ولی تعریف اصلی اینجا نیست
+  return;
 }
 
 /**
@@ -43,8 +43,8 @@ async function setUserState(userId, state) {
  * @param {number|string} userId شناسه کاربر
  */
 async function clearUserState(userId) {
-  // این تابع هم مثل بالا فقط اعلام می‌کنم که وجود داره
-  throw new Error('clearUserState is not implemented');
+  // این تابع هم باید تو index.js یا جای مناسب تو پروژه تعریف بشه
+  return;
 }
 
 module.exports = { askAI, setUserState, clearUserState };
