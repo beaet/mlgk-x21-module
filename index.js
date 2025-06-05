@@ -867,6 +867,27 @@ if (data === 'hero_counter') {
 
 if (data === 'profile') {
   await bot.answerCallbackQuery(query.id);
+
+  const invitesCount = user.invites || 0;
+  const maxDailyChance = match.getMaxDailyChance(user);
+  const usedChance = user.findChanceUsed || 0;
+  const teammateProfile = user.teammate_profile || {};
+  const rank = teammateProfile.rank || 'نامشخص';
+  const mainHero = teammateProfile.mainHero || 'نامشخص';
+  const mainRole = teammateProfile.mainRole || 'نامشخص';
+  const gameId = teammateProfile.gameId || 'نامشخص';
+
+  // --- بخش شانس AI ---
+  // مقدار پیش‌فرض شانس روزانه AI (مثلاً 2)
+  const maxDailyAIChance = user.maxDailyAIChance || 2;
+  const aiUsage = user.ai_usage || {};
+  const aiUsed = aiUsage.count || 0;
+  const aiChanceStr = (aiUsed < maxDailyAIChance)
+    ? `${maxDailyAIChance - aiUsed} از ${maxDailyAIChance}`
+    : 'تمام!';
+
+if (data === 'profile') {
+  await bot.answerCallbackQuery(query.id);
   const invitesCount = user.invites || 0;
   const maxDailyChance = match.getMaxDailyChance(user);
   const usedChance = user.findChanceUsed || 0;
@@ -876,22 +897,23 @@ if (data === 'profile') {
   const mainRole = teammateProfile.mainRole || 'نامشخص';
   const gameId = teammateProfile.gameId || 'نامشخص';
   let profileMessage = 
-  `🆔 آیدی عددی: ${userId}\n` +
-  `⭐ امتیاز فعلی: ${user.points}\n` +
-  `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
-  `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n\n` +  // 👈 خط فاصله
-  `🏅 رنک: ${rank}\n` +
-  `🦸‍♂️ هیرو مین: ${mainHero}\n` +
-  `🎯 رول اصلی: ${mainRole}\n` +
-  `🎮 آیدی یا اسم گیم: ${gameId}`;
+    `🆔 آیدی عددی: ${userId}\n` +
+    `⭐ امتیاز فعلی: ${user.points}\n` +
+    `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
+    `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
+    `🤖 شانس هوش مصنوعی: ${aiChanceStr}\n\n` + // 👈 اضافه شد
+    `🏅 رنک: ${rank}\n` +
+    `🦸‍♂️ هیرو مین: ${mainHero}\n` +
+    `🎯 رول اصلی: ${mainRole}\n` +
+    `🎮 آیدی یا اسم گیم: ${gameId}`;
 
-return bot.sendMessage(userId, profileMessage, {
-  reply_markup: {
-    inline_keyboard: [
-      [{ text: '✏️ ویرایش اطلاعات بازیکن', callback_data: 'find_teammate_profile' }]
-    ]
-  }
-});
+  return bot.sendMessage(userId, profileMessage, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '✏️ ویرایش اطلاعات بازیکن', callback_data: 'find_teammate_profile' }]
+      ]
+    }
+  });
 }
 
   // ---- لیست پیک/بن ----
