@@ -568,10 +568,8 @@ if (data === 'ask_ai') {
       await set(usageRef, usageData);
     }
     await bot.answerCallbackQuery(query.id);
-    await bot.sendMessage(userId, '🤖 هوش مصنوعی ML Studio اکنون فعال است!
-
-✍🏻 سوالت رو بنویس تا در کمترین زمان، دقیق‌ترین پاسخ رو دریافت کنی:');
-    aiAwaiting[userId] = true;
+await bot.sendMessage(userId, '🤖 هوش مصنوعی ML Studio اکنون فعال است!\n\n✍🏻 سوالت رو بنویس تا در کمترین زمان، دقیق‌ترین پاسخ رو دریافت کنی:');
+aiAwaiting[userId] = true;
 return;
   }
   
