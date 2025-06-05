@@ -1448,13 +1448,22 @@ if (!botActive && msg.from.id !== adminId) {
     return bot.sendMessage(userId, 'شما بن شده‌اید و اجازه استفاده ندارید.');
   }
   
-  console.log('msg', userId, msg.text, aiAwaiting[userId]);
-  if (aiAwaiting[userId] && msg.text && msg.chat.type === 'private') {
+  if (!aiAwaiting[userId] && userId !== adminId) return;
+  
+  if (msg.chat.type !== 'private') return;
+  
+    if (aiAwaiting[userId] && msg.text) {
     aiAwaiting[userId] = false;
     await bot.sendMessage(userId, '⏳ در حال دریافت پاسخ...');
     const answer = await ai.askAI(msg.text);
     await bot.sendMessage(userId, answer);
     return;
+  }
+
+  // هندل سایر پیام‌ها برای ادمین
+  if (userId === adminId) {
+    const user = await getUser(userId);
+    rank.handleTextMessage(bot, msg, adminMode, adminId);
   }
   // ... سایر هندلرهای پیام
   
