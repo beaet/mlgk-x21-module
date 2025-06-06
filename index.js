@@ -631,61 +631,35 @@ if (banSnap.exists() && banSnap.val().until > now) {
   return;
 }
 
-// هندل دکمه‌های پیدا کردن هم‌تیمی (عادی، رنک، کلاسیک)
-// دکمه پیدا کردن هم‌تیمی اصلی
-if (
-  data === 'find_teammate' ||
-  data === 'find_teammate_ranked' ||
-  data === 'find_teammate_classic'
-) {
+if (data === 'find_teammate') {
   const user = await getUser(userId);
   const maxDailyChance = match.getMaxDailyChance(user);
   const usedChance = user.findChanceUsed || 0;
-
   if (usedChance >= maxDailyChance) {
-    return bot.answerCallbackQuery(query.id, {
-      text: `🔖 سقف شانس امروزیت پره! برای هر ۵ دعوت، هر روز یک شانس بیشتر می‌گیری.`,
-      show_alert: true
-    });
+    return bot.answerCallbackQuery(query.id, { text: `🔖سقف شانس امروزیت پره! برای هر ۵ دعوت هر روز یک شانس بیشتر می‌گیری.`, show_alert: true });
   }
+  userState[userId] = { step: 'find_teammate_category' };
+  await bot.answerCallbackQuery(query.id);
+  return bot.sendMessage(userId, `شانس امروز شما: ${maxDailyChance - usedChance} از ${maxDailyChance}\n🎮نوع بازی رو انتخاب کن:`, {
+    reply_markup: {
+      inline_keyboard: [
+        [
+      { text: '🏆رنک', callback_data: 'find_teammate_ranked' },
+      { text: '🏝️کلاسیک', callback_data: 'find_teammate_classic' }
+    ],
+    [{ text: '🧭ثبت اطلاعات من', callback_data: 'find_teammate_profile' }],
+    [{ text: '📋 لیست بلاکی‌ها', callback_data: 'blocked_users_list' }],
+    [{ text: '🔙بازگشت', callback_data: 'main_menu' }]
+  ]
+    }
+  });
+}
 
-  if (data === 'find_teammate') {
-    userState[userId] = { step: 'find_teammate_category' };
-    await bot.answerCallbackQuery(query.id);
-    return bot.sendMessage(
-      userId,
-      `شانس امروز شما: ${maxDailyChance - usedChance} از ${maxDailyChance}\n🎮 نوع بازی رو انتخاب کن:`,
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '🏆رنک', callback_data: 'find_teammate_ranked' },
-              { text: '🏝️کلاسیک', callback_data: 'find_teammate_classic' }
-            ],
-            [{ text: '🧭ثبت اطلاعات من', callback_data: 'find_teammate_profile' }],
-            [{ text: '📋 لیست بلاکی‌ها', callback_data: 'blocked_users_list' }],
-            [{ text: '🔙بازگشت', callback_data: 'main_menu' }]
-          ]
-        }
-      }
-    );
-  }
-
-  if (data === 'find_teammate_ranked' || data === 'find_teammate_classic') {
-    userState[userId] = {
-      step: 'waiting_match',
-      mode: data === 'find_teammate_ranked' ? 'ranked' : 'classic'
-    };
-    await bot.answerCallbackQuery(query.id);
-    await match.addToQueue({
-      userId,
-      mode: userState[userId].mode,
-      db,
-      bot,
-      userState
-    });
-    return;
-  }
+if (data === 'find_teammate_ranked' || data === 'find_teammate_classic') {
+  userState[userId] = { step: 'waiting_match', mode: data === 'find_teammate_ranked' ? 'ranked' : 'classic' };
+  await bot.answerCallbackQuery(query.id);
+  await match.addToQueue({ userId, mode: userState[userId].mode, db, bot, userState });
+  return;
 }
 
 if (data === 'find_teammate_profile') {
@@ -693,6 +667,8 @@ if (data === 'find_teammate_profile') {
   await bot.answerCallbackQuery(query.id);
   return bot.sendMessage(userId, '🏅 رنکت چیه؟ (مثلا: اپیک، لجند، میتیک)');
 }
+
+
 
 if (data === 'anon_cancel') {
   // اگر قبلا لغو نکرده بود
@@ -900,6 +876,7 @@ if (data === 'hero_counter') {
 
 if (data === 'profile') {
   await bot.answerCallbackQuery(query.id);
+
   const invitesCount = user.invites || 0;
   const maxDailyChance = match.getMaxDailyChance(user);
   const usedChance = user.findChanceUsed || 0;
@@ -909,20 +886,20 @@ if (data === 'profile') {
   const mainRole = teammateProfile.mainRole || 'نامشخص';
   const gameId = teammateProfile.gameId || 'نامشخص';
 
-  // شانس هوش مصنوعی
-  const maxDailyAIChance = user.maxDailyAIChance || 2; // اگر مقدار custom ندارد، پیش‌فرض ۲
-  const aiUsage = user.ai_usage || {};
-  const aiUsed = aiUsage.count || 0;
-  const aiChanceStr = (aiUsed < maxDailyAIChance)
-    ? `${maxDailyAIChance - aiUsed} از ${maxDailyAIChance}`
-    : 'تمام!';
+  // 🧠 وضعیت شانس AI را بگیر
+  const aiUsageRef = ref(db, `ai_usage/${userId}`);
+  const aiUsageSnap = await get(aiUsageRef);
+  let aiUsageData = aiUsageSnap.exists() ? aiUsageSnap.val() : { date: '', count: 0 };
+  if (aiUsageData.date !== today) aiUsageData = { date: today, count: 0 };
+  const aiUsed = aiUsageData.count || 0;
+  const aiRemaining = 2 - aiUsed;
 
   let profileMessage = 
     `🆔 آیدی عددی: ${userId}\n` +
     `⭐ امتیاز فعلی: ${user.points}\n` +
     `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
     `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
-    `🤖 شانس هوش مصنوعی: ${aiChanceStr}\n\n` + // 👈 اضافه شد
+    `🧠 شانس هوش مصنوعی: ${aiRemaining} از 2\n\n` +  // 👈 این خط جدید اضافه شده
     `🏅 رنک: ${rank}\n` +
     `🦸‍♂️ هیرو مین: ${mainHero}\n` +
     `🎯 رول اصلی: ${mainRole}\n` +
@@ -1697,23 +1674,20 @@ if (userId === adminId && state && state.step === 'enter_user_id_for_ai_chance')
 if (userId === adminId && state && state.step === 'enter_new_ai_chance_value') {
   const targetUserId = state.targetUserId;
   if (text.trim() === '#') {
-    // بازگشت به حالت پیش‌فرض
+    // بازگشت به حالت پیش‌فرض (۲/۲)
     await update(ref(db, `users/${targetUserId}`), { maxDailyAIChance: null });
-    // ریست شمارنده مصرف روزانه
-    await update(ref(db, `users/${targetUserId}/ai_usage`), { count: 0 });
     userState[userId] = null;
-    return bot.sendMessage(userId, `شانس روزانه AI کاربر ${targetUserId} به حالت پیش‌فرض (۲/۲) بازگشت و شمارنده مصرف هم ریست شد.`);
+    return bot.sendMessage(userId, `شانس روزانه AI کاربر ${targetUserId} به حالت پیش‌فرض (۲/۲) بازگشت.`);
   } else if (/^\d+$/.test(text)) {
     const val = parseInt(text);
     await update(ref(db, `users/${targetUserId}`), { maxDailyAIChance: val });
-    // ریست شمارنده مصرف روزانه
-    await update(ref(db, `users/${targetUserId}/ai_usage`), { count: 0 });
     userState[userId] = null;
-    return bot.sendMessage(userId, `شانس روزانه AI کاربر ${targetUserId} به ${val}/${val} تغییر کرد و شمارنده مصرف هم ریست شد.`);
+    return bot.sendMessage(userId, `شانس روزانه AI کاربر ${targetUserId} به ${val}/${val} تغییر کرد.`);
   } else {
     return bot.sendMessage(userId, 'عدد معتبر وارد کنید یا # برای حالت پیش‌فرض.');
   }
 }
+  
 
 
   // ---- User steps for calculations ----
