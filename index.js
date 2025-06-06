@@ -646,17 +646,13 @@ else if (query.data === 'give_coin_to_merlin') {
   const user = await getUser(userId);
 
   if ((user.points || 0) < 1) {
-    // انتخاب پیام رندوم برای سکه کافی نبودن
     const randomNoCoinMsg = noCoinMessages[Math.floor(Math.random() * noCoinMessages.length)];
-    // پاسخ با alert نمایش پیام
     await bot.answerCallbackQuery(query.id, { text: randomNoCoinMsg, show_alert: true });
     return;
   }
 
-  // کم کردن 1 سکه
   await updatePoints(userId, -1);
 
-  // جملات رندوم برای پاسخ به کم شدن سکه (بدون نمایش تعداد سکه)
   const responses = [
     `سکه‌ات رو گرفتم، جادوی مرلین شروع میشه! 🧙🏼‍♂✨`,
     `سکه‌ات جادو رو قوی‌تر کرد! 🧙🏼‍♂✨`,
@@ -664,14 +660,33 @@ else if (query.data === 'give_coin_to_merlin') {
   ];
   const randomResponse = responses[Math.floor(Math.random() * responses.length)];
 
-  // انتخاب جمله رندوم از magic.json
+  // انتخاب پیام رندوم از magic.json
   const randomIndex = Math.floor(Math.random() * magicData.length);
   const randomMagic = magicData[randomIndex].text;
 
-  // ارسال پیام جدید با جمله مرلین
+  // انتخاب ایموجی بر اساس ایندکس
+  let emoji = '✨';
+  if (randomIndex >= 51 && randomIndex <= 90) {
+    emoji = '🔮';
+  }
+
+  // ارسال ایموجی و ذخیره پیام برای حذف
+  const emojiMessage = await bot.sendMessage(chatId, emoji);
+
+  // صبر 3 ثانیه
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
+  // حذف ایموجی
+  try {
+    await bot.deleteMessage(chatId, emojiMessage.message_id);
+  } catch (e) {
+    console.log("❌ حذف ایموجی ناموفق بود:", e.message);
+  }
+
+  // ارسال پیام جادویی
   await bot.sendMessage(chatId, randomMagic);
 
-  // پاسخ به callback با پیام رندوم
+  // پاسخ به callback
   await bot.answerCallbackQuery(query.id, { text: randomResponse });
 }
   
