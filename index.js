@@ -1810,6 +1810,16 @@ if (userId === adminId && state && state.step === 'enter_user_id_for_ai_chance')
 }
 
 // مرحله گرفتن عدد شانس یا # برای پیش‌فرض
+if (userId === adminId && state && state.step === 'enter_user_id_for_ai_chance') {
+  if (!/^\d+$/.test(text)) {
+    return bot.sendMessage(userId, 'آیدی عددی معتبر وارد کنید.');
+  }
+  state.targetUserId = text.trim();
+  state.step = 'enter_new_ai_chance_value';
+  return bot.sendMessage(userId, 'عدد شانس روزانه جدید AI را وارد کن (مثلاً 4). اگر می‌خواهی به حالت پیش‌فرض (۲/۲) برگردد، # را وارد کن:');
+}
+
+// مرحله گرفتن عدد شانس یا # برای پیش‌فرض
 if (userId === adminId && state && state.step === 'enter_new_ai_chance_value') {
   const targetUserId = state.targetUserId;
   if (text.trim() === '#') {
