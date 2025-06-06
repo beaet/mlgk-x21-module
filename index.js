@@ -567,6 +567,7 @@ if (data === 'ask_ai') {
     // اگر تاریخ عوض شده، ریست کنیم ولی مقدار max رو نگه داریم
     if (usageData.date !== today) {
       usageData = { date: today, count: 0, max: usageData.max || 2 };
+      await set(usageRef, usageData);  // ← ذخیره مقدار جدید در دیتابیس
     }
 
     const maxDaily = usageData.max || 2;
@@ -985,7 +986,7 @@ if (data === 'profile') {
   await bot.answerCallbackQuery(query.id);
 
   const invitesCount = user.invites || 0;
-  const maxDailyChance = match.getMaxDailyChance(user);
+  const maxDailyChance = match.getMaxDailyChance(user);  // اگر این تابع مقدار درست نمیده بهتر بخونیم خودمون
   const usedChance = user.findChanceUsed || 0;
   const teammateProfile = user.teammate_profile || {};
   const rank = teammateProfile.rank || 'نامشخص';
@@ -993,20 +994,29 @@ if (data === 'profile') {
   const mainRole = teammateProfile.mainRole || 'نامشخص';
   const gameId = teammateProfile.gameId || 'نامشخص';
 
-  // 🧠 وضعیت شانس AI را بگیر
+  // 🧠 وضعیت شانس AI را از دیتابیس بخوان
+  const userRef = ref(db, `users/${userId}`);
+  const userSnap = await get(userRef);
+  const userData = userSnap.exists() ? userSnap.val() : {};
+
+  // مقدار ماکزیمم شانس AI یا پیش‌فرض 2
+  const maxDailyAIChance = (userData.maxDailyAIChance != null) ? userData.maxDailyAIChance : 2;
+
+  // وضعیت استفاده شده امروز
   const aiUsageRef = ref(db, `ai_usage/${userId}`);
   const aiUsageSnap = await get(aiUsageRef);
   let aiUsageData = aiUsageSnap.exists() ? aiUsageSnap.val() : { date: '', count: 0 };
   if (aiUsageData.date !== today) aiUsageData = { date: today, count: 0 };
   const aiUsed = aiUsageData.count || 0;
-  const aiRemaining = 2 - aiUsed;
+  // محاسبه شانس باقی‌مانده بر اساس مقدار ذخیره شده
+  const aiRemaining = maxDailyAIChance - aiUsed;
 
   let profileMessage = 
     `🆔 آیدی عددی: ${userId}\n` +
     `⭐ امتیاز فعلی: ${user.points}\n` +
     `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
     `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
-    `🧠 شانس هوش مصنوعی: ${aiRemaining} از 2\n\n` +  // 👈 این خط جدید اضافه شده
+    `🧠 شانس هوش مصنوعی: ${aiRemaining} از ${maxDailyAIChance}\n\n` +  // اصلاح شده
     `🏅 رنک: ${rank}\n` +
     `🦸‍♂️ هیرو مین: ${mainHero}\n` +
     `🎯 رول اصلی: ${mainRole}\n` +
@@ -1575,7 +1585,7 @@ await bot.sendMessage(userId, '🚀');
   if (state && state.step === 'ask_mainRole') {
     state.teammateProfile.mainRole = text;
     state.step = 'ask_gameId';
-    return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری):');
+    return bot.sendMessage(userId, '🆔 آیدی عددی یا اسم گیمت (اختیاری، اگه نمیخوای بنویس نامشخص):');
   }
   if (state && state.step === 'ask_gameId') {
     state.teammateProfile.gameId = text || 'اختیاری/نامشخص';
