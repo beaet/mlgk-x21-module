@@ -1500,6 +1500,11 @@ bot.on('message', async (msg) => {
   const state = userState[userId];
   const text = msg.text || '';
   if (msg.chat.type !== 'private') return;
+
+  // گرفتن فایل آی‌دی استیکر اگر استیکر بود
+  if (msg.sticker) {
+    console.log("📦 File ID استیکر:", msg.sticker.file_id);
+  }
   
   const user = await getUser(userId);
 rank.handleTextMessage(bot, msg, adminMode, adminId);
