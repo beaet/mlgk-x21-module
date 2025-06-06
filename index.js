@@ -902,14 +902,20 @@ if (data === 'profile') {
   let aiUsageData = aiUsageSnap.exists() ? aiUsageSnap.val() : { date: '', count: 0 };
   if (aiUsageData.date !== today) aiUsageData = { date: today, count: 0 };
   const aiUsed = aiUsageData.count || 0;
-  const aiRemaining = 2 - aiUsed;
 
-  let profileMessage = 
+  // 👇 حداکثر شانس هوش مصنوعی را از custom_limits بگیر
+  const aiLimitRef = ref(db, `custom_limits/${userId}/ai`);
+  const aiLimitSnap = await get(aiLimitRef);
+  const maxAiChance = aiLimitSnap.exists() ? aiLimitSnap.val() : 2;
+
+  const aiRemaining = Math.max(0, maxAiChance - aiUsed);
+
+  let profileMessage =
     `🆔 آیدی عددی: ${userId}\n` +
     `⭐ امتیاز فعلی: ${user.points}\n` +
     `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
     `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
-    `🧠 شانس هوش مصنوعی: ${aiRemaining} از 2\n\n` +  // 👈 این خط جدید اضافه شده
+    `🧠 شانس هوش مصنوعی: ${aiRemaining} از ${maxAiChance}\n\n` +
     `🏅 رنک: ${rank}\n` +
     `🦸‍♂️ هیرو مین: ${mainHero}\n` +
     `🎯 رول اصلی: ${mainRole}\n` +
@@ -1506,42 +1512,6 @@ if (userId === adminId && state && state.step === 'edit_chance_enter_value') {
     return bot.sendMessage(userId, `شانس روزانه کاربر ${state.targetUserId} به ${val}/${val} تنظیم و مقدار استفاده ریست شد.`);
   }
 }
-
-    if (!aiLimitState[userId]) return;
-
-  // مرحله اول: دریافت آیدی عددی
-  if (aiLimitState[userId] === 'awaiting_user_id') {
-    if (!/^\d+$/.test(text)) {
-      return bot.sendMessage(userId, '❌ لطفاً فقط آیدی عددی وارد کن.');
-    }
-    aiLimitState[userId] = { step: 'awaiting_limit_value', targetId: text };
-    return bot.sendMessage(userId, `آیدی ${text} ثبت شد.\nمقدار شانس جدید را وارد کن یا # برای بازنشانی:`);
-  }
-
-  // مرحله دوم: دریافت مقدار جدید یا بازنشانی
-  if (aiLimitState[userId].step === 'awaiting_limit_value') {
-    const targetId = aiLimitState[userId].targetId;
-    const usageRef = ref(db, `ai_usage/${targetId}`);
-    const usageSnap = await get(usageRef);
-    const usageData = usageSnap.exists() ? usageSnap.val() : { date: '', count: 0 };
-
-    if (text === '#') {
-      usageData.max = 2;
-      await set(usageRef, usageData);
-      delete aiLimitState[userId];
-      return bot.sendMessage(userId, `✅ مقدار شانس هوش مصنوعی برای ${targetId} به حالت پیش‌فرض (۲) برگشت.`);
-    }
-
-    const newLimit = parseInt(text);
-    if (isNaN(newLimit) || newLimit <= 0) {
-      return bot.sendMessage(userId, '❌ لطفاً فقط یک عدد مثبت وارد کن یا # برای ریست.');
-    }
-
-    usageData.max = newLimit;
-    await set(usageRef, usageData);
-    delete aiLimitState[userId];
-    return bot.sendMessage(userId, `✅ شانس روزانه AI برای ${targetId} روی ${newLimit} تنظیم شد.`);
-  }
   
 if (state && state.step === 'in_anonymous_chat' && state.chatPartner) {
   const partnerId = state.chatPartner;
