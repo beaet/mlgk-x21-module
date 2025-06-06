@@ -583,8 +583,7 @@ if (data === 'ask_ai') {
     await set(usageRef, usageData);
   }
 
-  await bot.answerCallbackQuery(query.id);
-  await bot.sendMessage(userId, '🤖 هوش مصنوعی ML Studio اکنون فعال است!\n\n✍🏻 سوالت رو بنویس تا در کمترین زمان، دقیق‌ترین پاسخ رو دریافت کنی:');
+  await bot.sendMessage(userId, '🤖 هوش مصنوعی ML Studio اکنون فعال است!\n\n✍🏻 سوالت رو بنویس تا در کمترین زمان، دقیق‌ترین پاسخ رو دریافت کنی.\n\n⏹️ اگر خواستی لغو کنی، کافیه دستور /cancel رو بفرستی.');
   aiAwaiting[userId] = true;
   return;
 }
@@ -1547,6 +1546,13 @@ if (aiAwaiting[userId]) {
 
   aiAwaiting[userId] = false;
   await bot.sendMessage(userId, '📡 تحلیل سوالت در حال انجامه... لطفاً کمی صبر کن');
+
+await new Promise(resolve => setTimeout(resolve, 1000));
+
+// ارسال ایموجی موشک
+await bot.sendMessage(userId, '🚀');
+
+
   const userMessage = text + ' in mlbb';
   const answer = await ai.askAI(userMessage);
   await bot.sendMessage(userId, answer);
