@@ -51,6 +51,7 @@ const MENU_BUTTONS = [
     { key: 'ask_ai', label: '🧬 ام ال AI' },
       { key: 'rank_calculator', label: '🧮 ماشین حساب رنک' },
   { key: 'ml_news', label: '📰 اخبار بازی' },
+    { key: 'magic_ml', label: '🧙‍♂️ مرلین' },
   { key: 'find_teammate', label: '🎲 پیداکردن هم‌‌ تیمی رندوم' }
 ];
 // ---- Firebase Config ----
@@ -270,9 +271,7 @@ function toolsMenuKeyboard() {
           { text: '🎯 رندوم پیک', callback_data: 'pick_hero' }
         ],
         [
-                          { text: '📰 اخبار بازی', callback_data: 'ml_news' }
-        ],
-        [
+                  { text: '📰 اخبار بازی', callback_data: 'ml_news' },
           { text: '📜 لیست پیک و بن', callback_data: 'pickban_list' }
         ],
         [
