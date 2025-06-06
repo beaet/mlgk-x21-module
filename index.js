@@ -20,6 +20,10 @@ const { sendNews } = require('./news');
 const match = require('./match');
 const rank = require('./rank');
 const { handlePickCommand, handlePickRole, handlePickAccessConfirmation } = require('./pick');
+const fs = require('fs');
+const path = require('path');
+const magicPath = path.resolve(__dirname, 'magic.json');
+const magicData = JSON.parse(fs.readFileSync(magicPath, 'utf-8'));
 // فرض بر این است که bot, db, updatePoints, adminId قبلاً تعریف شده دکمه‌ها (callback_query):
 const token = process.env.BOT_TOKEN;
 const adminId = Number(process.env.ADMIN_ID);
