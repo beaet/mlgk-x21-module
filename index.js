@@ -272,6 +272,9 @@ function toolsMenuKeyboard() {
           { text: '📜 لیست پیک و بن', callback_data: 'pickban_list' }
         ],
         [
+                          { text: '🧙🏻 مرلین', callback_data: 'magic_ml' }
+        ],
+        [
           { text: '⬅️ بازگشت', callback_data: 'back_to_main' }
         ]
       ]
@@ -591,6 +594,60 @@ if (data === 'change_ai_limit' && userId === adminId) {
   }
 
   // بقیه callback ها...
+  
+  
+  if (query.data === 'magic_ml') {
+    const userId = query.from.id;
+    const chatId = query.message.chat.id;
+    await ensureUser(query.from);
+    const user = await getUser(userId);
+
+    // پیام اولیه با دکمه "یه سکه به مرلین بده"
+    const msg = `سلام! من مرلینم، یه جادوگر قدرتمند (البته ممکنه یه کمی هم گد… خب، منظورم جادوگرم 😅)
+من می‌تونم فکت‌های جادویی از موبایل لجند بگم که شاید به کارت بیاد!
+ولی برای یه جمله جادویی باید یه سکه به من بدی! 👇`;
+
+    // دکمه inline برای دادن سکه
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: '💰 یه سکه به مرلین بده', callback_data: 'give_coin_to_merlin' }]
+      ]
+    };
+
+    await bot.editMessageText(msg, {
+      chat_id: chatId,
+      message_id: query.message.message_id,
+      reply_markup: keyboard,
+    });
+
+    // پاسخ به callback query تا نوار لودینگ بسته بشه
+    await bot.answerCallbackQuery(query.id);
+  }
+
+  else if (query.data === 'give_coin_to_merlin') {
+    const userId = query.from.id;
+    const chatId = query.message.chat.id;
+    await ensureUser(query.from);
+    const user = await getUser(userId);
+
+    if ((user.points || 0) < 1) {
+      await bot.answerCallbackQuery(query.id, { text: 'سکه کافی نداری 😢', show_alert: true });
+      return;
+    }
+
+    // کم کردن 1 سکه
+    const newPoints = await updatePoints(userId, -1);
+
+    // انتخاب جمله رندوم از magic.json
+    const randomIndex = Math.floor(Math.random() * magicData.length);
+    const randomMagic = magicData[randomIndex].text;
+
+    // ارسال پیام جدید با جمله مرلین
+    await bot.sendMessage(chatId, randomMagic);
+
+    // پاسخ به callback
+    await bot.answerCallbackQuery(query.id, { text: `یه سکه کم شد! تو الان ${newPoints} سکه داری.` });
+  }
   
   if (data === 'ml_news') {
   const cooldownRef = ref(db, `cooldowns/news/${userId}`);
