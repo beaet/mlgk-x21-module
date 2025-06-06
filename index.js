@@ -1017,16 +1017,18 @@ if (data === 'profile') {
 
   const aiRemaining = Math.max(0, aiMax - aiUsed);
 
-  let profileMessage = 
-    `🆔 آیدی عددی: ${userId}\n` +
-    `⭐ امتیاز فعلی: ${user.points}\n` +
-    `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
-    `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
-    `🧠 شانس هوش مصنوعی: ${aiRemaining} از ${aiMax}\n\n` +
-    `🏅 رنک: ${rank}\n` +
-    `🦸‍♂️ هیرو مین: ${mainHero}\n` +
-    `🎯 رول اصلی: ${mainRole}\n` +
-    `🎮 آیدی یا اسم گیم: ${gameId}`;
+let profileMessage =
+  `🆔 آیدی عددی: <code>${userId}</code>\n` + // کلیک‌پذیر برای کپی
+  `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
+  `———————————————\n` +
+  `⭐ امتیاز فعلی: ${user.points}\n` +
+  `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
+  `🧠 شانس هوش مصنوعی: ${aiRemaining} از ${aiMax}\n` +
+  `———————————————\n` +
+  `🎮 آیدی یا اسم گیم: ${gameId}\n` +
+  `🏅 رنک: ${rank}\n` +
+  `🎯 رول اصلی: ${mainRole}\n` +
+  `🦸‍♂️ هیرو مین: ${mainHero}`;
 
   return bot.sendMessage(userId, profileMessage, {
     reply_markup: {
