@@ -902,20 +902,14 @@ if (data === 'profile') {
   let aiUsageData = aiUsageSnap.exists() ? aiUsageSnap.val() : { date: '', count: 0 };
   if (aiUsageData.date !== today) aiUsageData = { date: today, count: 0 };
   const aiUsed = aiUsageData.count || 0;
+  const aiRemaining = 2 - aiUsed;
 
-  // 👇 حداکثر شانس هوش مصنوعی را از custom_limits بگیر
-  const aiLimitRef = ref(db, `custom_limits/${userId}/ai`);
-  const aiLimitSnap = await get(aiLimitRef);
-  const maxAiChance = aiLimitSnap.exists() ? aiLimitSnap.val() : 2;
-
-  const aiRemaining = Math.max(0, maxAiChance - aiUsed);
-
-  let profileMessage =
+  let profileMessage = 
     `🆔 آیدی عددی: ${userId}\n` +
     `⭐ امتیاز فعلی: ${user.points}\n` +
     `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
     `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
-    `🧠 شانس هوش مصنوعی: ${aiRemaining} از ${maxAiChance}\n\n` +
+    `🧠 شانس هوش مصنوعی: ${aiRemaining} از 2\n\n` +  // 👈 این خط جدید اضافه شده
     `🏅 رنک: ${rank}\n` +
     `🦸‍♂️ هیرو مین: ${mainHero}\n` +
     `🎯 رول اصلی: ${mainRole}\n` +
