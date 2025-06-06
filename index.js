@@ -276,7 +276,7 @@ function toolsMenuKeyboard() {
           { text: '📜 لیست پیک و بن', callback_data: 'pickban_list' }
         ],
         [
-                          { text: '🧙🏻 مرلین', callback_data: 'magic_ml' }
+                          { text: '🧙🏼‍♂ مرلین', callback_data: 'magic_ml' }
         ],
         [
           { text: '⬅️ بازگشت', callback_data: 'back_to_main' }
@@ -600,58 +600,88 @@ if (data === 'change_ai_limit' && userId === adminId) {
   // بقیه callback ها...
   
   
-  if (query.data === 'magic_ml') {
-    const userId = query.from.id;
-    const chatId = query.message.chat.id;
-    await ensureUser(query.from);
-    const user = await getUser(userId);
+// آرایه پیام‌های رندوم برای سکه کافی نبودن (alert)
+const noCoinMessages = [
+  'تو که از منم گداتری، اول یه سکه جور کن بیا بعد! 🧙🏼‍♂️',
+  'جادو بدون سکه؟ من اینجوری کار نمی‌کنم، برو پول جمع کن! 🧙🏼‍♂️',
+  'سکه نداری؟ خب پس باید مثل من یه گدا باشی! 🧙🏼‍♂️'
+];
 
-    // پیام اولیه با دکمه "یه سکه به مرلین بده"
-    const msg = `سلام! من مرلینم، یه جادوگر قدرتمند (البته ممکنه یه کمی هم گد… خب، منظورم جادوگرم 😅)
-من می‌تونم فکت‌های جادویی از موبایل لجند بگم که شاید به کارت بیاد!
-ولی برای یه جمله جادویی باید یه سکه به من بدی! 👇`;
+if (query.data === 'magic_ml') {
+  const userId = query.from.id;
+  const chatId = query.message.chat.id;
+  await ensureUser(query.from);
+  const user = await getUser(userId);
 
-    // دکمه inline برای دادن سکه
-    const keyboard = {
-      inline_keyboard: [
-        [{ text: '💰 یه سکه به مرلین بده', callback_data: 'give_coin_to_merlin' }]
-      ]
-    };
+  // پیام اولیه با دکمه "یه سکه به مرلین بده"
+  const msg = `🧙🏼‍♂️ هی رفیق! منم مرلین، یه جادوگر قدرتمند و یه کوچولو گد...
 
-    await bot.editMessageText(msg, {
-      chat_id: chatId,
-      message_id: query.message.message_id,
-      reply_markup: keyboard,
-    });
+آهان نه، بهتره اون قسمت رو فراموش کنیم! بعضی چیزا نباید فاش بشن... 📜
 
-    // پاسخ به callback query تا نوار لودینگ بسته بشه
-    await bot.answerCallbackQuery(query.id);
+من اینجام تا برات فکت‌های جادویی از دنیای Mobile Legends رو رو کنم—رازهایی که شاید سرنوشت یه نبردو عوض کنن! ⚔️✨
+
+ولی یه شرط داره... هر فکت، یه سکه می‌خواد! 💰
+
+اگه یه سکه بدی، منم جادومو شروع می‌کنم و یه راز واقعی رو می‌فرستم سمتت 🪄🔮
+
+راستی اگه شنیدی کسی گفت مرلین گداست یا اسکم می‌کنه، جدی نگیر!
+جادو خرج داره، مخصوصاً تو این اوضاع! 🏰
+
+✨ خب، بگو ببینم… آماده‌ای جادو رو شروع کنیم یا نه؟ ✨`;
+
+  // دکمه inline برای دادن سکه
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: '💰 مرلین: یه سکه بده دیگه داداش
+', callback_data: 'give_coin_to_merlin' }]
+    ]
+  };
+
+  await bot.editMessageText(msg, {
+    chat_id: chatId,
+    message_id: query.message.message_id,
+    reply_markup: keyboard,
+  });
+
+  // پاسخ به callback query تا نوار لودینگ بسته بشه
+  await bot.answerCallbackQuery(query.id);
+}
+
+else if (query.data === 'give_coin_to_merlin') {
+  const userId = query.from.id;
+  const chatId = query.message.chat.id;
+  await ensureUser(query.from);
+  const user = await getUser(userId);
+
+  if ((user.points || 0) < 1) {
+    // انتخاب پیام رندوم برای سکه کافی نبودن
+    const randomNoCoinMsg = noCoinMessages[Math.floor(Math.random() * noCoinMessages.length)];
+    // پاسخ با alert نمایش پیام
+    await bot.answerCallbackQuery(query.id, { text: randomNoCoinMsg, show_alert: true });
+    return;
   }
 
-  else if (query.data === 'give_coin_to_merlin') {
-    const userId = query.from.id;
-    const chatId = query.message.chat.id;
-    await ensureUser(query.from);
-    const user = await getUser(userId);
+  // کم کردن 1 سکه
+  await updatePoints(userId, -1);
 
-    if ((user.points || 0) < 1) {
-      await bot.answerCallbackQuery(query.id, { text: 'سکه کافی نداری 😢', show_alert: true });
-      return;
-    }
+  // جملات رندوم برای پاسخ به کم شدن سکه (بدون نمایش تعداد سکه)
+  const responses = [
+    `سکه‌ات رو گرفتم، جادوی مرلین شروع میشه! 🧙🏼‍♂✨`,
+    `سکه‌ات جادو رو قوی‌تر کرد! 🧙🏼‍♂✨`,
+    `با سکه تو، جادو آغاز شد! 🧙🏼‍♂✨`
+  ];
+  const randomResponse = responses[Math.floor(Math.random() * responses.length)];
 
-    // کم کردن 1 سکه
-    const newPoints = await updatePoints(userId, -1);
+  // انتخاب جمله رندوم از magic.json
+  const randomIndex = Math.floor(Math.random() * magicData.length);
+  const randomMagic = magicData[randomIndex].text;
 
-    // انتخاب جمله رندوم از magic.json
-    const randomIndex = Math.floor(Math.random() * magicData.length);
-    const randomMagic = magicData[randomIndex].text;
+  // ارسال پیام جدید با جمله مرلین
+  await bot.sendMessage(chatId, randomMagic);
 
-    // ارسال پیام جدید با جمله مرلین
-    await bot.sendMessage(chatId, randomMagic);
-
-    // پاسخ به callback
-    await bot.answerCallbackQuery(query.id, { text: `یه سکه کم شد! تو الان ${newPoints} سکه داری.` });
-  }
+  // پاسخ به callback با پیام رندوم
+  await bot.answerCallbackQuery(query.id, { text: randomResponse });
+}
   
   if (data === 'ml_news') {
   const cooldownRef = ref(db, `cooldowns/news/${userId}`);
