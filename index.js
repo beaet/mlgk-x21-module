@@ -606,16 +606,14 @@ const noCoinMessages = [
   'سکه نداری؟ خب پس باید مثل من یه گدا باشی! 🧙🏼‍♂️'
 ];
 
-bot.on('callback_query', async (query) => {
-  const data = query.data;
+if (query.data === 'magic_ml') {
   const userId = query.from.id;
   const chatId = query.message.chat.id;
-
   await ensureUser(query.from);
+  const user = await getUser(userId);
 
-// 🧙🏼‍♂️ معرفی مرلین
-  if (data === 'magic_ml') {
-    const msg = `🧙🏼‍♂️ هی رفیق! منم مرلین، یه جادوگر قدرتمند و یه کوچولو گد...\n
+  // پیام اولیه با دکمه "یه سکه به مرلین بده"
+  const msg = `🧙🏼‍♂️ هی رفیق! منم مرلین، یه جادوگر قدرتمند و یه کوچولو گد...\n
 آهان نه، بهتره اون قسمت رو فراموش کنیم! بعضی چیزا نباید فاش بشن... 📜\n\n
 من اینجام تا برات فکت‌های جادویی از دنیای Mobile Legends رو رو کنم — رازهایی که شاید سرنوشت یه نبردو عوض کنن! ⚔️✨\n\n
 ولی یه شرط داره... هر فکت، یه سکه می‌خواد! 💰\n\n
@@ -624,63 +622,73 @@ bot.on('callback_query', async (query) => {
 جادو خرج داره، مخصوصاً تو این اوضاع! 🏰\n\n
 ✨ خب، بگو ببینم… آماده‌ای جادو رو شروع کنیم یا نه؟ ✨`;
 
-    const keyboard = {
-      inline_keyboard: [
-        [{ text: '💰 مرلین: یه سکه بده دیگه داداش\n', callback_data: 'give_coin_to_merlin' }]
-      ]
-    };
+  // دکمه inline برای دادن سکه
+  const keyboard = {
+  inline_keyboard: [
+    [{ text: '💰 مرلین: یه سکه بده دیگه داداش\n', callback_data: 'give_coin_to_merlin' }]
+  ]
+};
 
-    await bot.editMessageText(msg, {
-      chat_id: chatId,
-      message_id: query.message.message_id,
-      reply_markup: keyboard,
-    });
+  await bot.editMessageText(msg, {
+    chat_id: chatId,
+    message_id: query.message.message_id,
+    reply_markup: keyboard,
+  });
 
-    await bot.answerCallbackQuery(query.id);
+  // پاسخ به callback query تا نوار لودینگ بسته بشه
+  await bot.answerCallbackQuery(query.id);
+}
+
+else if (query.data === 'give_coin_to_merlin') {
+  const userId = query.from.id;
+  const chatId = query.message.chat.id;
+  await ensureUser(query.from);
+  const user = await getUser(userId);
+
+  if ((user.points || 0) < 1) {
+    const randomNoCoinMsg = noCoinMessages[Math.floor(Math.random() * noCoinMessages.length)];
+    await bot.answerCallbackQuery(query.id, { text: randomNoCoinMsg, show_alert: true });
     return;
   }
 
-  // 💰 مرلین: گرفتن سکه و فرستادن پیام جادویی
-  if (data === 'give_coin_to_merlin') {
-    const user = await getUser(userId);
+  await updatePoints(userId, -1);
 
-    if ((user.points || 0) < 1) {
-      const randomNoCoinMsg = noCoinMessages[Math.floor(Math.random() * noCoinMessages.length)];
-      await bot.answerCallbackQuery(query.id, { text: randomNoCoinMsg, show_alert: true });
-      return;
-    }
+  const responses = [
+    `سکه‌ات رو گرفتم، جادوی مرلین شروع میشه! 🧙🏼‍♂✨`,
+    `سکه‌ات جادو رو قوی‌تر کرد! 🧙🏼‍♂✨`,
+    `با سکه تو، جادو آغاز شد! 🧙🏼‍♂✨`
+  ];
+  const randomResponse = responses[Math.floor(Math.random() * responses.length)];
 
-    await updatePoints(userId, -1);
+  // انتخاب پیام رندوم از magic.json
+  const randomIndex = Math.floor(Math.random() * magicData.length);
+  const randomMagic = magicData[randomIndex].text;
 
-    const responses = [
-      `سکه‌ات رو گرفتم، جادوی مرلین شروع میشه! 🧙🏼‍♂✨`,
-      `سکه‌ات جادو رو قوی‌تر کرد! 🧙🏼‍♂✨`,
-      `با سکه تو، جادو آغاز شد! 🧙🏼‍♂✨`
-    ];
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-
-    const randomIndex = Math.floor(Math.random() * magicData.length);
-    const randomMagic = magicData[randomIndex].text;
-
-    let emoji = '✨';
-    if (randomIndex >= 51 && randomIndex <= 90) emoji = '🔮';
-
-    const emojiMessage = await bot.sendMessage(chatId, emoji);
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    try {
-      await bot.deleteMessage(chatId, emojiMessage.message_id);
-    } catch (e) {
-      console.log("❌ حذف ایموجی ناموفق بود:", e.message);
-    }
-
-    await bot.sendMessage(chatId, randomMagic);
-    await bot.answerCallbackQuery(query.id, { text: randomResponse });
-    return;
+  // انتخاب ایموجی بر اساس ایندکس
+  let emoji = '✨';
+  if (randomIndex >= 51 && randomIndex <= 90) {
+    emoji = '🔮';
   }
 
-  // ❌ اگر هیچ شرطی match نشد
-  console.log(`❌ Unhandled callback data: "${data}" from userId: ${userId}`);
-});
+  // ارسال ایموجی و ذخیره پیام برای حذف
+  const emojiMessage = await bot.sendMessage(chatId, emoji);
+
+  // صبر 3 ثانیه
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
+  // حذف ایموجی
+  try {
+    await bot.deleteMessage(chatId, emojiMessage.message_id);
+  } catch (e) {
+    console.log("❌ حذف ایموجی ناموفق بود:", e.message);
+  }
+
+  // ارسال پیام جادویی
+  await bot.sendMessage(chatId, randomMagic);
+
+  // پاسخ به callback
+  await bot.answerCallbackQuery(query.id, { text: randomResponse });
+}
   
   if (data === 'ml_news') {
   const cooldownRef = ref(db, `cooldowns/news/${userId}`);
