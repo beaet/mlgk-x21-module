@@ -94,7 +94,7 @@ function delay(ms) {
 
 await delay(2000); // 2 ثانیه صبر کن
 
-await bot.sendMessage(userId, "🌕");
+await bot.sendSticker(userId, 'CAACAgEAAyEFAASTr_zSAANxaENBgtqW3NYrNwbX0zLuzGJhwsYAAq0IAALjeAQAAYSW9OOhLspaNgQ');
 
 return false;
   }
