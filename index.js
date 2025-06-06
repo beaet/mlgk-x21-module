@@ -986,7 +986,7 @@ if (data === 'profile') {
   await bot.answerCallbackQuery(query.id);
 
   const invitesCount = user.invites || 0;
-  const maxDailyChance = match.getMaxDailyChance(user);  // اگر این تابع مقدار درست نمیده بهتر بخونیم خودمون
+  const maxDailyChance = match.getMaxDailyChance(user);
   const usedChance = user.findChanceUsed || 0;
   const teammateProfile = user.teammate_profile || {};
   const rank = teammateProfile.rank || 'نامشخص';
@@ -994,29 +994,35 @@ if (data === 'profile') {
   const mainRole = teammateProfile.mainRole || 'نامشخص';
   const gameId = teammateProfile.gameId || 'نامشخص';
 
-  // 🧠 وضعیت شانس AI را از دیتابیس بخوان
-  const userRef = ref(db, `users/${userId}`);
-  const userSnap = await get(userRef);
+  // گرفتن مقدار maxDailyAIChance از مسیر users
+  const userSnap = await get(ref(db, `users/${userId}`));
   const userData = userSnap.exists() ? userSnap.val() : {};
+  const maxDailyAIChance = userData.maxDailyAIChance ?? null;
 
-  // مقدار ماکزیمم شانس AI یا پیش‌فرض 2
-  const maxDailyAIChance = (userData.maxDailyAIChance != null) ? userData.maxDailyAIChance : 2;
-
-  // وضعیت استفاده شده امروز
+  // گرفتن اطلاعات مصرف شانس AI
   const aiUsageRef = ref(db, `ai_usage/${userId}`);
   const aiUsageSnap = await get(aiUsageRef);
   let aiUsageData = aiUsageSnap.exists() ? aiUsageSnap.val() : { date: '', count: 0 };
   if (aiUsageData.date !== today) aiUsageData = { date: today, count: 0 };
+
   const aiUsed = aiUsageData.count || 0;
-  // محاسبه شانس باقی‌مانده بر اساس مقدار ذخیره شده
-  const aiRemaining = maxDailyAIChance - aiUsed;
+
+  // تعیین مقدار نهایی شانس مجاز (max)
+  let aiMax = 2; // پیش‌فرض
+  if (maxDailyAIChance !== null) {
+    aiMax = maxDailyAIChance;
+  } else if (aiUsageData.max != null) {
+    aiMax = aiUsageData.max;
+  }
+
+  const aiRemaining = Math.max(0, aiMax - aiUsed);
 
   let profileMessage = 
     `🆔 آیدی عددی: ${userId}\n` +
     `⭐ امتیاز فعلی: ${user.points}\n` +
     `📨 تعداد دعوتی‌ها: ${invitesCount}\n` +
     `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
-    `🧠 شانس هوش مصنوعی: ${aiRemaining} از ${maxDailyAIChance}\n\n` +  // اصلاح شده
+    `🧠 شانس هوش مصنوعی: ${aiRemaining} از ${aiMax}\n\n` +
     `🏅 رنک: ${rank}\n` +
     `🦸‍♂️ هیرو مین: ${mainHero}\n` +
     `🎯 رول اصلی: ${mainRole}\n` +
