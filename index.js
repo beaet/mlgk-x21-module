@@ -1018,7 +1018,8 @@ if (data === 'profile') {
   const aiRemaining = Math.max(0, aiMax - aiUsed);
 
 let profileMessage =
-  `🆔 آیدی عددی: \`${userId}\`\n` +
+  `🆔 آیدی عددی شما:\n` +
+  `${userId}\n\n` + // فقط عدد، در خط جداگانه، بدون هیچ چیز دیگر
   `📨 تعداد دعوتی‌ها: ${invitesCount}\n\n` +
   `⭐ امتیاز فعلی: ${user.points}\n` +
   `🎲 شانس روزانه: ${maxDailyChance - usedChance} از ${maxDailyChance}\n` +
@@ -1027,7 +1028,6 @@ let profileMessage =
   `🏅 رنک: ${rank}\n` +
   `🎯 رول اصلی: ${mainRole}\n` +
   `🦸‍♂️ هیرو مین: ${mainHero}`;
-
   return bot.sendMessage(userId, profileMessage, {
     reply_markup: {
       inline_keyboard: [
