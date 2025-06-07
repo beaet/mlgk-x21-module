@@ -29,6 +29,7 @@ const token = process.env.BOT_TOKEN;
 const adminId = Number(process.env.ADMIN_ID);
 const port = process.env.PORT || 10000;
 let botActive = true
+const webhookUrl = process.env.WEBHOOK_URL;
 const MENU_BUTTONS = [
   { key: 'calculate_rate', label: '📊محاسبه ریت' },
   { key: 'calculate_wl', label: '🏆محاسبه برد و باخت' },
@@ -215,7 +216,11 @@ const supportChatMap = {};
   await fetchBotActiveStatus();
   // اینجا بقیه کدهای bot و express را بنویس
   // مثلاً:
-  const bot = new TelegramBot(token, { polling: true });
+  const bot = new TelegramBot(token, { polling: false });
+  app.post(`/bot${BOT_TOKEN}`, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
 
   
 // ---- Main Menu ----
